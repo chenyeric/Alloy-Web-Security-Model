@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="BAD"/>
+   <type name="Bob"/>
+   <type name="Carol"/>
+   <type name="GOOD"/>
+   <type name="Int"/>
+   <type name="String"/>
+   <type name="univ"/>
+   <type name="httpFacts/Globals"/>
+   <type name="seq/Int"/>
+   <type name="httpFacts/network/c200"/>
+   <type name="httpFacts/network/c301"/>
+   <type name="httpFacts/network/c302"/>
+   <type name="httpFacts/network/c303"/>
+   <type name="httpFacts/network/c304"/>
+   <type name="httpFacts/network/c305"/>
+   <type name="httpFacts/network/c306"/>
+   <type name="httpFacts/network/c307"/>
+   <type name="httpFacts/network/DELETE"/>
+   <type name="httpFacts/network/Event"/>
+   <type name="httpFacts/network/Firefox"/>
+   <type name="httpFacts/network/GET"/>
+   <type name="httpFacts/network/HTTPClient"/>
+   <type name="httpFacts/network/HTTPHeader"/>
+   <type name="httpFacts/network/HTTPRequest"/>
+   <type name="httpFacts/network/HTTPResponse"/>
+   <type name="httpFacts/network/HTTPServer"/>
+   <type name="httpFacts/network/HTTPTransaction"/>
+   <type name="httpFacts/network/InternetExplorer"/>
+   <type name="httpFacts/network/location"/>
+   <type name="httpFacts/network/NetworkEvent"/>
+   <type name="httpFacts/network/POST"/>
+   <type name="httpFacts/network/PUT"/>
+   <type name="httpFacts/network/Safari"/>
+   <type name="httpFacts/network/Time"/>
+   <type name="httpFacts/network/ordering/Ord"/>
+   <set name="$show_r" type="httpFacts/network/HTTPResponse"/>
+</node>
+
+<node visible="no">
+   <type name="httpFacts/network/Method"/>
+   <type name="httpFacts/network/NetworkEndpoint"/>
+   <type name="httpFacts/network/RedirectionStatus"/>
+   <type name="httpFacts/network/Status"/>
+</node>
+
+<edge attribute="yes">
+   <relation name="from"> <type name="httpFacts/network/Event"/> <type name="httpFacts/network/NetworkEndpoint"/> </relation>
+   <relation name="method"> <type name="httpFacts/network/HTTPRequest"/> <type name="httpFacts/network/Method"/> </relation>
+   <relation name="statusCode"> <type name="httpFacts/network/HTTPResponse"/> <type name="httpFacts/network/Status"/> </relation>
+   <relation name="to"> <type name="httpFacts/network/Event"/> <type name="httpFacts/network/NetworkEndpoint"/> </relation>
+</edge>
+
+<edge visible="no" attribute="yes">
+   <relation name="headers"> <type name="httpFacts/network/HTTPResponse"/> <type name="httpFacts/network/HTTPHeader"/> </relation>
+   <relation name="target"> <type name="httpFacts/network/HTTPHeader"/> <type name="httpFacts/network/HTTPServer"/> </relation>
+</edge>
+
+</view>
+
+</alloy>
