@@ -244,29 +244,6 @@ pred isCrossOriginRequest[request:HTTPRequest]{
 		getContextOf[request].dnslabel != request.host.dnslabel
 }
 
-// moved CORS to a separate file cors.alf for modularization
-
-/************************************
-* CSRF
-*
-************************************/
-
-
-// RFC talks about having Origin Chain and not a single Origin
-// We handle Origin chain by having multiple Origin Headers 
-sig OriginHeader extends HTTPRequestHeader {theorigin: Origin}
-
-
-fun getFinalResponse[request:HTTPRequest]:HTTPResponse{
-        {response : HTTPResponse | not ( response.statusCode in RedirectionStatus) and response in ((req.request).*(~cause)).resp}
-}
-
-pred isFinalResponseOf[request:HTTPRequest, response : HTTPResponse] {
-       not ( response.statusCode in RedirectionStatus)
-       response in ((req.request).*(~cause)).resp
-}
-
-
 
 
 //enum Port{P80,P8080}
@@ -307,107 +284,7 @@ sig Certificate {
 }
 
 
-/****************************
-Cookie Stuff
-****************************/
 
-
-
-
-// Currently the String type is taken but not yet implemented in Alloy
-// We will replace String1 with String when the latter is fully available in Alloy
-sig String1 {} 
-
-sig UserToken extends Secret {
-        id : WebPrincipal
-}
-
-sig Cookie extends Secret {
-	name : Token,
-	value : Token,
-	domain : DNS,
-	path : Path,
-}{}
-
-sig SecureCookie extends Cookie {}
-
-sig CookieHeader extends HTTPRequestHeader{ thecookie : Cookie }
-sig SetCookieHeader extends HTTPResponseHeader{	thecookie : Cookie }
-
-fact SecureCookiesOnlySentOverHTTPS{
-		all e:HTTPEvent,c:SecureCookie | {
-				e.from in Browser + NormalPrincipal.servers
-				httpPacketHasCookie[c,e]
-		} implies e.host.schema=HTTPS
-
-}
-
-
-fact CookiesAreSameOriginAndSomeOneToldThemToTheClient{
-	all areq:HTTPRequest |{ 
-			areq.from in Browser  
-			some ( areq.headers & CookieHeader)
-	} implies  all acookie :(areq.headers & CookieHeader).thecookie | some aresp: location.(areq.from).transactions.resp | {
-				//don't do same origin check as http cookies can go over https
-				aresp.host.dnslabel = areq.host.dnslabel
-				acookie in (aresp.headers & SetCookieHeader).thecookie
-                some host:aresp.host.dnslabel | isSubdomainOf[host, acookie.domain] //JHB changed 5/16/11
-				happensBeforeOrdering[aresp,areq]
-	}
-}
-
-pred httpPacketHasCookie[c:Cookie,httpevent:HTTPRequest+HTTPResponse]{
-				(httpevent in HTTPRequest and  c in (httpevent.headers & CookieHeader).thecookie ) or
-				(httpevent in HTTPResponse and c in (httpevent.headers & SetCookieHeader).thecookie)
-}
-
-pred hasKnowledgeViaUnencryptedHTTPEvent[c: Cookie, ne : NetworkEndpoint, usageEvent: Event]{
-		ne !in WebPrincipal.servers + Browser
-		some httpevent : HTTPEvent | {
-			happensBeforeOrdering[httpevent,usageEvent]
-			httpevent.host.schema = HTTP
-			httpPacketHasCookie[c,httpevent]
-		}
-}
-
-pred hasKnowledgeViaDirectHTTP[c:Cookie,ne:NetworkEndpoint,usageEvent:Event]{
-		some t: HTTPTransaction | {
-		happensBeforeOrdering[t.req,usageEvent]
-		httpPacketHasCookie[c,t.req]
-		t.resp.from = ne
-	} or {
-		happensBeforeOrdering[t.resp,usageEvent]
-		httpPacketHasCookie[c,t.resp]
-		some ((transactions.t).location & ne)
-		}
-}
-
-pred hasKnowledgeCookie[c:Cookie,ne:NetworkEndpoint,usageEvent:Event]{
-	ne in c.madeBy.servers or hasKnowledgeViaUnencryptedHTTPEvent[c,ne,usageEvent] or hasKnowledgeViaDirectHTTP[c,ne,usageEvent]
-}
-
-fact BeforeUsingCookieYouNeedToKnowAboutIt{
-	all e:HTTPRequest + HTTPResponse | 
-// Use httpPacketHasCookie
-			all c:(e.(HTTPRequest <: headers) & CookieHeader).thecookie + (e.(HTTPResponse <: headers) & SetCookieHeader).thecookie |
-					hasKnowledgeCookie[c,e.from,e]
-}
-
-fact NormalPrincipalsAndWebAttackersMakeCookiesWithTheirDomain{
-	all e:HTTPResponse |
-		all c:(e.headers & SetCookieHeader).thecookie | {
-			e.from in (NormalPrincipal+WEBATTACKER).servers implies 
-                 c.madeBy = e.from[servers] &&
-                 some dns: e.from.(~servers).dnslabels |   isSubdomainOf[dns,c.domain]//JHB 5-16-11
-		}
-}
-
-fact NormalPrincipalsDontReuseCookies{
-	all p:NormalPrincipal | no disj e1,e2:HTTPResponse | {
-			(e1.from + e2.from) in p.servers 
-			some ( 	(e1.headers & SetCookieHeader).thecookie & (e2.headers & SetCookieHeader).thecookie )
-	}
-}
 
 run show2 {
 	some (SetCookieHeader).thecookie
@@ -457,7 +334,7 @@ lone sig WEBATTACKER extends WebPrincipal{}
 abstract sig NormalPrincipal extends WebPrincipal{} { 	dnslabels.resolvesTo in servers}
 lone sig GOOD extends NormalPrincipal{}
 lone sig SECURE extends NormalPrincipal{}
-lone sig ORIGINAWARE extends NormalPrincipal{}
+
 
 fact NonActiveFollowHTTPRules {
 // Old rule was :
@@ -472,15 +349,6 @@ fact SecureIsHTTPSOnly {
 //	STS Requirement : all sc : ScriptContext | some (getPrincipalFromOrigin[sc.owner] & SECURE ) implies sc.transactions.req.host.schema=HTTPS
 }
 
-
-fact CSRFProtection {
-	all aResp:HTTPResponse | aResp.from in ORIGINAWARE.servers and aResp.statusCode=c200 implies {
-		(resp.aResp).req.method in safeMethods or (
-		let theoriginchain = ((resp.aResp).req.headers & OriginHeader).theorigin |
-			some theoriginchain and theoriginchain.dnslabel in ORIGINAWARE.dnslabels
-		)
-	}
-}
 
 fact NormalPrincipalsHaveNonTrivialDNSValues {
 // Normal Principals don't mess around with trivial DNS values
