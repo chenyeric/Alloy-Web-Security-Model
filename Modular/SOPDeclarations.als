@@ -81,7 +81,7 @@ run unauthorizedAccessForSpec {
          !isSubdomainOf[atk.defaultOrigin.dnslabel, vict.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
          canAccessChained[atk, vict]
   }
-} for 10 but 1 NetworkEndpoint
+} for 9 but 1 NetworkEndpoint
 
 run unauthorizedAccessForFirefox { //discovers the Firefox bug
   some disj vict, atk: documentDOM |  {
