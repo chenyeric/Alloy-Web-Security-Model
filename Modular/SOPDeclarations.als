@@ -4,10 +4,12 @@ open DNSAndOrigin
 
 abstract sig SOPObject {
    enforcer : one SOPEnforcer,   //Which Browser is doing the enforcement? Need a place for variations
-   canAccess : set SOPObject
+   canAccess : set SOPObject,
+   canNavigate: set SOPObject
    //More to come such as canRead, canWrite, canNavigate, etc
 }{
   this in canAccess // Objects can access themselves
+  this in canNavigate //Objects can navigate themselves
 }
 
 fact accessOnlyThroughSameEnforcer { // if 2 objects are not in the same browser, they can't access each other
@@ -81,7 +83,7 @@ run unauthorizedAccessForSpec {
          !isSubdomainOf[atk.defaultOrigin.dnslabel, vict.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
          canAccessChained[atk, vict]
   }
-} for 9 but 1 NetworkEndpoint
+} for 10 but 1 NetworkEndpoint
 
 run unauthorizedAccessForFirefox { //discovers the Firefox bug
   some disj vict, atk: documentDOM |  {
