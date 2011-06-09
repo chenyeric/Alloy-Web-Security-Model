@@ -17,7 +17,7 @@ fact ParentChildRelation{
 	}
 }
 
-sig ChromeFrame extends Frame{} //frame navigation for chrome is a bit different
+//sig ChromeFrame extends Frame{} //frame navigation for chrome is a bit different
 
 //let's assume that each browser has 1 rendering engine (the FF model)
 //Window==>frames==>script contexts
@@ -119,13 +119,15 @@ run topNavigationCanHappen{
 	}
 } for 4
 
-run CrossOriginTopLevelNavigationForUserInitiatedFrameShouldNotHappen{
+check CrossOriginNavigationForUnrelatedFramesShouldNotHappen{
 	no disj nav_frm, main_frm:Frame| {
 		nav_frm.dom in main_frm.dom.canNavigate // main frame can navigate nav frame
-		one win:Window|{
-			nav_frm = win.top //nav frame is the top level frame
+		some disj main_win, nav_win:Window|{
+			nav_frm = nav_win.*contentFrames //nav frame is the top level frame
+			main_frm = main_win.*contentFrames
 		}
-		no nav_frm.initiator // this frame is initiated by the user
+		nav_frm.initiator!=main_frm // the frames are not initiated by each other
+		main_frm.initiator!=nav_frm
 		nav_frm.dom.effectiveOrigin != main_frm.dom.effectiveOrigin // this is a cross origin navigation
 	}
 } for 5
