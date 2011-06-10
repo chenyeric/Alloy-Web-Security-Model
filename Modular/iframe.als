@@ -42,15 +42,12 @@ fact OneFramePerDom{
 	
 }
 
-//all frames must be inside ONE and only ONE Window, and must have one DOM
+//all frames must be inside ONE and only ONE Window
 fact OneWindowOneDomPerFrame{
 	all frm:Frame|{					//every frame must have
 		one win:Window|{ //one window
 			frm = win.top or			//such that, the frame is either the top level frame or
 			frm in win.top.*childFrame //it is a child frame 
-		}
-		one this_dom:documentDOM|{//it must also have one dom
-			this_dom = frm.dom
 		}
 	}
 }
@@ -104,15 +101,15 @@ fact W3NavPolicy{
 	all disj nav_frm, main_frm:Frame|{ 
 		nav_frm.dom in main_frm.dom.canNavigate implies ( //main frame can navigate nav frame if:
 			nav_frm.dom.effectiveOrigin = main_frm.dom.effectiveOrigin or //1) they are from the same origin or,
-			one win:Window|{ //2) nav frm and main frm are in the same window and nav frm is the top frm
+			some win:Window|{ //2) nav frm and main frm are in the same window and nav frm is the top frm
 				(nav_frm + main_frm) in win.contentFrames
 				nav_frm = win.top
 			} or
-			one win:Window|{ //3) nav is an auxilliary context and main is allowed to navigate nav's initiator
+			some win:Window|{ //3) nav is an auxilliary context and main is allowed to navigate nav's initiator
 				nav_frm = win.top
 				nav_frm.initiator.dom in main_frm.dom.canNavigate
 			} or
-			one win:Window{
+			some win:Window{
 				nav_frm != win.top //4) nav is not a top frame
 				some p_nav_frm:Frame|{
 					nav_frm = p_nav_frm.*childFrame //4) but there exists some ancestor of nav
@@ -153,8 +150,7 @@ check CrossOriginNavigationForUnrelatedFramesShouldNotHappen{
 
 
 //define sandbox attributes
-abstract sig iframe_sandbox_policy{}
-sig NOT_ALLOW_SAME_ORIGIN, NOT_ALLOW_TOP_NAVIGATION, NOT_ALLOW_FORMS, NOT_ALLOW_SCRIPTS extends iframe_sandbox_policy{}
+enum iframe_sandbox_policy {NOT_ALLOW_SAME_ORIGIN, NOT_ALLOW_TOP_NAVIGATION, NOT_ALLOW_FORMS, NOT_ALLOW_SCRIPTS}
 
 //iframe sandbox
 sig IframeSandbox extends Frame{
