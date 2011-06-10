@@ -1,11 +1,11 @@
-open basicDeclarations
+//open basicDeclarations
 open DNSAndOrigin
 open SOPDeclarations
 
 sig Frame {
 	//context: one ScriptContext,
 	initiator: lone Frame,
-	dom: documentDOM,
+	dom : one documentDOM,
 	parentFrame: lone Frame,
 	childFrame: set Frame
 }
@@ -36,20 +36,21 @@ sig Window {
 
 //each dom must belong to one and only one frame
 fact OneFramePerDom{
-	all this_dom:documentDOM|{ //every DOM object must be...
-		some frm1, frm2:Frame|{  
-			frm1.dom = this_dom //...linked with one frame
-			frm1.dom = frm2.dom implies frm1 = frm2 //this dom cannot exist in 2 different frames
-		}
-	}
+
+	no this_dom:documentDOM | no this_dom.~dom // every dom must be linked with 1 frame
+	dom in Frame one -> one documentDOM // every frame has a unique dom
+	
 }
 
-//all frames must be inside ONE and only ONE Window
-fact OneWindowPerFrame{
+//all frames must be inside ONE and only ONE Window, and must have one DOM
+fact OneWindowOneDomPerFrame{
 	all frm:Frame|{					//every frame must have
 		one win:Window|{ //one window
 			frm = win.top or			//such that, the frame is either the top level frame or
 			frm in win.top.*childFrame //it is a child frame 
+		}
+		one this_dom:documentDOM|{//it must also have one dom
+			this_dom = frm.dom
 		}
 	}
 }
@@ -60,6 +61,24 @@ fact UserInitiatedFrames{
 		no frm.initiator implies 
 			no frm.parentFrame
 	}
+}
+
+//frames can only initiate other frames that they are "allowed" to navigate
+fact InitiationImpliesCanNavigate{
+	all frm1, frm2:Frame|{
+		frm1.initiator=frm2 implies 
+			frm1.dom in frm2.dom.canNavigate
+	}
+}
+
+//frames cannot initiate(load) each other
+fact NoBidirectionalLoad{
+	no disj frm1,frm2:Frame|{
+		frm1.initiator= frm2
+		frm2.initiator= frm1
+
+	}
+
 }
 
 run FramesAreSane{
@@ -145,8 +164,67 @@ sig IframeSandbox extends Frame{
 //the sandbox policies for a frame should be the most strict policy after combining its parents policy
 fun most_strict_sandbox_policy[frm:Frame]:set iframe_sandbox_policy{
 	frm.policies+frm.*parentFrame.policies //union of all the restrictions
-
 }
+
+fact IframeSandboxCannotBeTopLevelFrame{
+	all sandbox:IframeSandbox, win:Window{
+		sandbox != win.top // iframe sandbox cannot be the top level frame for ANY window
+	}
+}
+
+//iframe sandbox navigation poicy
+fact SandboxAllowNavigation{
+
+	//iframe sandbox can ONLY navigate its top frame if Allow navigation is set
+	all disj sandboxfrm, frm:Frame, win:Window|{
+		{
+			sandboxfrm in IframeSandbox     
+			frm.dom in sandboxfrm.dom.canNavigate  //if sandbox can navigate a frame, then...
+		} implies{
+			(sandboxfrm+frm) in win.contentFrames //this frame must be in the same window as the sandbox and...
+			frm = win.top //this frame must be the top level frame
+		}
+
+	}
+
+	//if allow navigation is not set, then it shouldn't be able to navigate anything
+	all disj sandboxfrm , topfrm:Frame , win:Window|{
+		{
+			sandboxfrm in IframeSandbox
+			(sandboxfrm+topfrm) in win.contentFrames
+			topfrm = win.top
+			NOT_ALLOW_TOP_NAVIGATION in most_strict_sandbox_policy[sandboxfrm]
+		} implies //if allow navi attr is not set
+			topfrm.dom not in sandboxfrm.dom.canNavigate //then top frame cannot be navigated by sandboxed frame
+	}
+}
+
+//test if navigation works
+run navigationTest{
+	some disj frm1, frm2, frm3:Frame|{
+		frm1.initiator = frm2
+		frm2.initiator = frm3
+		frm1.dom not in frm3.dom.canNavigate
+
+	}
+} for 4
+
+//sandbox navigation policy checker
+check SandboxNotAllowNavigationWorks{
+	no disj sandboxfrm, topfrm, frm:Frame, win:Window|{
+		sandboxfrm in IframeSandbox
+		(sandboxfrm+topfrm) in win.contentFrames //if the top frame of a window sandboxes another frame...
+		topfrm = win.top
+		
+		NOT_ALLOW_TOP_NAVIGATION in sandboxfrm.policies //policy exists to disallow top navigation
+
+		//the sandboxed frame should no tbe able to initiate another frame that navigates the top
+		sandboxfrm = frm.initiator
+		//topfrm.dom.effectiveOrigin = frm.dom.effectiveOrigin
+		topfrm.dom in frm.dom.canNavigate
+		
+	}
+} for 5
 
 /*
 //===========absolete=============/
