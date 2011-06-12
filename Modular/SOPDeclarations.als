@@ -5,7 +5,8 @@ open DNSAndOrigin
 abstract sig SOPObject {
    enforcer : one SOPEnforcer,   //Which Browser is doing the enforcement? Need a place for variations
    canAccess : set SOPObject,
-   canNavigate: set SOPObject
+   canNavigate: set SOPObject,
+
    //More to come such as canRead, canWrite, canNavigate, etc
 }{
   this in canAccess // Objects can access themselves
@@ -40,6 +41,10 @@ one sig specSOP extends SOPEnforcer{}
 abstract sig DOMObject extends SOPObject {}
 
 //add other DOMObjects here, such as imgs, scripts, etc.
+sig scriptDOM extends DOMObject{
+	srcOrigin: one Origin, //the source origin of the script
+	embeddedOrigin: one Origin // the origin that embedded this script
+}
 
 //Modeling Mozilla document.domain
 sig documentDOM extends DOMObject {
