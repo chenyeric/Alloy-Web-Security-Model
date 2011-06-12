@@ -83,9 +83,7 @@ fact NoBidirectionalLoad{
 	no disj frm1,frm2:Frame|{
 		frm1.initiator= frm2
 		frm2.initiator= frm1
-
 	}
-
 }
 
 run FramesAreSane{
@@ -184,7 +182,7 @@ fact SandboxNavigationPolicy{
 	//iframe sandbox can ONLY navigate its top frame if Allow navigation is set
 	all disj sandboxfrm, frm:Frame, win:Window|{
 		{
-			sandboxfrm in IframeSandbox     
+			//sandboxfrm in IframeSandbox     
 			frm.dom in sandboxfrm.dom.canNavigate  //if sandbox can navigate a frame, then...
 		} implies{
 			(sandboxfrm+frm) in win.contentFrames //this frame must be in the same window as the sandbox and...
@@ -195,7 +193,7 @@ fact SandboxNavigationPolicy{
 	//if allow navigation is not set, then it shouldn't be able to navigate anything
 	all disj sandboxfrm , topfrm:Frame , win:Window|{
 		{
-			sandboxfrm in IframeSandbox
+			//sandboxfrm in IframeSandbox
 			(sandboxfrm+topfrm) in win.contentFrames
 			topfrm = win.top
 			NOT_ALLOW_TOP_NAVIGATION in most_strict_sandbox_policy[sandboxfrm]
@@ -209,7 +207,7 @@ fact SandboxOriginPolicy{
 	//if allow same origin is not set, then the sandbox should have its unique origin
 	all disj sandboxfrm, frm:Frame{
 		{
-			sandboxfrm in IframeSandbox
+			//sandboxfrm in IframeSandbox
 			NOT_ALLOW_SAME_ORIGIN in most_strict_sandbox_policy[sandboxfrm] //if allow same origin is not set
 		}implies{
 			sandboxfrm.dom.effectiveOrigin = sandboxfrm.dom.defaultOrigin //sandbox cannot set its document.domain
@@ -217,37 +215,14 @@ fact SandboxOriginPolicy{
 			sandboxfrm.dom.effectiveOrigin != frm.dom.defaultOrigin    //sandbox must have its own unique origin
 		}
 	}
-
-	//if a frame is nested inside a sandbox, the same policy should apply
-	all disj frm, nestedfrm, sandboxfrm:Frame{
-		{
-			sandboxfrm in IframeSandbox
-			nestedfrm in sandboxfrm.*childFrame
-			NOT_ALLOW_SAME_ORIGIN in most_strict_sandbox_policy[sandboxfrm]
-		}implies{
-			nestedfrm.dom.effectiveOrigin = nestedfrm.dom.defaultOrigin //nested frame cannot set its document.domain
-			nestedfrm.dom.effectiveOrigin != frm.dom.effectiveOrigin
-			nestedfrm.dom.effectiveOrigin != frm.dom.defaultOrigin    //nested must have its own unique origin
-		}
-	}
 }
 
 
 fact SandboxScriptPolicy{
 	//if allow script is not set, then the sandbox should not have a script element
-	all sandboxfrm:IframeSandbox{
+	all sandboxfrm:Frame{
 		NOT_ALLOW_SCRIPTS in most_strict_sandbox_policy[sandboxfrm] implies
 			no sandboxfrm.script
-	}
-
-	//if a frame is nested inside a sandbox, the script policy should still apply
-	all disj frm, sandboxfrm:Frame{
-		{
-			sandboxfrm in IframeSandbox
-			frm in sandboxfrm.*childFrame
-			NOT_ALLOW_SCRIPTS in most_strict_sandbox_policy[sandboxfrm]
-		}implies
-			no frm.script
 	}
 }
 
