@@ -3,6 +3,18 @@ open DNSAndOrigin
 open SOPDeclarations
 open iframe
 
+sig CSPFrame extends Frame {
+	//CSP policies
+	csp: lone CSPPolicies
+}
+
+sig CSPPolicies{
+	allowScript: set scriptDOM,
+	frameAncestor: set Origin,
+	frameSrc:set Origin
+}
+
+
 //----------------------------------------CSP facts----------------------------//
 //script policy for CSP, we are not modelling eval
 fact CSPAllowScripts{
@@ -59,7 +71,7 @@ fact CSPFrameAncestors{
 
 //-------------------------------------CSP checks------------------------//
 check FrameNavigationIsImpossibleWithFrameSrcDirective{
-	no pfrm, cfrm:Frame, origin:Origin{
+	no pfrm, cfrm:CSPFrame, origin:Origin{
 		some pfrm.csp
 		origin = cfrm.dom.effectiveOrigin
 		origin not in pfrm.csp.frameSrc //if child frame is NOT allowed by the framesrc directive
@@ -68,7 +80,7 @@ check FrameNavigationIsImpossibleWithFrameSrcDirective{
 }for 5
 
 check ClickJackIsImpossibleWithFrameAncestorDirective{
-	no pfrm,cfrm:Frame, origin:Origin{
+	no pfrm,cfrm:CSPFrame, origin:Origin{
 		some cfrm.csp.frameAncestor
 		origin = pfrm.dom.effectiveOrigin
 		origin not in cfrm.csp.frameAncestor // if parent frame is not allowed by frame ancestor
@@ -77,7 +89,7 @@ check ClickJackIsImpossibleWithFrameAncestorDirective{
 }for 5
 
 check NonWhiteListedScriptImpossibleWithAllowScriptDirective{
-	no script:scriptDOM, frm:Frame{
+	no script:scriptDOM, frm:CSPFrame{
 		some frm.csp
 		script not in frm.csp.allowScript //script is not allowed
 		script in frm.scripts
