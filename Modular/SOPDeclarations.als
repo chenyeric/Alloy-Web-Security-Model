@@ -6,12 +6,14 @@ abstract sig SOPObject {
    enforcer : one SOPEnforcer,   //Which Browser is doing the enforcement? Need a place for variations
    canAccess : set SOPObject,
    canNavigate: set SOPObject,
-
+   mimeType:  one MIMEType,
    //More to come such as canRead, canWrite, canNavigate, etc
 }{
   this in canAccess // Objects can access themselves
   this in canNavigate //Objects can navigate themselves
 }
+
+enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 
 fact accessOnlyThroughSameEnforcer { // if 2 objects are not in the same browser, they can't access each other
    all disj o1, o2: SOPObject | 
@@ -26,11 +28,19 @@ one sig specSOP extends SOPEnforcer{}
 
 abstract sig DOMObject extends SOPObject {}
 
-//add other DOMObjects here, such as imgs, scripts, etc.
+//add other DOMObjects here, such as imgs, etc.
+
+//script object
 sig scriptDOM extends DOMObject{
 	srcOrigin: one Origin, //the source origin of the script
-	embeddedOrigin: one Origin // the origin that embedded this script
+	embeddedOrigin: one Origin, // the origin that embedded this script
+	attribute: set scriptAttribute
+}{
+	INLINE in attribute implies srcOrigin = embeddedOrigin //only way for inline scripts to happen
 }
+
+//varrious attrbutes for scripts, ie inline, sanitized, etc
+enum scriptAttribute {INLINE}
 
 //Modeling Mozilla document.domain
 sig documentDOM extends DOMObject {
@@ -60,6 +70,12 @@ pred canAccessChained [accessor:SOPObject, resource:SOPObject] {
 }
 
 
+check inLinescriptsAreSane{
+	no s:scriptDOM | {
+		INLINE in s.attribute
+		s.srcOrigin!=s.embeddedOrigin
+	}
+}for 5
 
 run effectiveOriginSanityCheck {
   some disj o1, o2: documentDOM | {
