@@ -56,26 +56,37 @@ sig scriptDOM extends DOMObject{
 //varrious attrbutes for scripts, ie inline, sanitized, etc
 enum scriptAttribute {INLINE}
 
+
 //Modeling Mozilla document.domain
 sig documentDOM extends DOMObject {
-   defaultOrigin : one Origin,
-   effectiveOrigin : one Origin
+   defaultOrigin : one Origin ,
+   effectiveOrigin : lone Origin  // the effective origin is from document.domain, which can also be not used.
 }
-{
-  //model the shortening of document.domain
-  //what is allowed may be browser dependent
-  //defaultOrigin.port = effectiveOrigin.port
-  defaultOrigin.schema = effectiveOrigin.schema
-  isSubdomainOf[defaultOrigin.dnslabel, effectiveOrigin.dnslabel]
+
+fact effectiveOriginLimitations {
+  all d:documentDOM | {
+     some d.effectiveOrigin => {
+       //d.defaultOrigin.port = d.effectiveOrigin.port
+       d.defaultOrigin.schema = d.effectiveOrigin.schema
+       isSubdomainOf[d.defaultOrigin.dnslabel, d.effectiveOrigin.dnslabel]
+     }
+  }
 }
 
 fact SOPEnforcementForCanAccess {
   all disj o1, o2: documentDOM | {
-      o1.enforcer !in FirefoxSOP => 
-            o2 in o1.canAccess implies o1.effectiveOrigin = o2.effectiveOrigin
-      o1.enforcer in FirefoxSOP => 
-            o2 in o1.canAccess implies ( o1.effectiveOrigin = o2.effectiveOrigin or 
-                                                        o1.defaultOrigin = o2.effectiveOrigin )
+    some o2.effectiveOrigin => { //case where o2 sets document.domain
+       o1.enforcer !in FirefoxSOP => 
+            o2 in o1.canAccess implies 
+                 o1.effectiveOrigin = o2.effectiveOrigin
+       o1.enforcer in FirefoxSOP => 
+            o2 in o1.canAccess implies 
+                 ( o1.effectiveOrigin = o2.effectiveOrigin or 
+                   o1.defaultOrigin = o2.effectiveOrigin )
+    }
+    no o2.effectiveOrigin => { // case where o2 does not set document.origin
+      o2 in o1.canAccess implies (no o1.effectiveOrigin) and (o1.defaultOrigin = o2.defaultOrigin)
+    }
   }
 }
 
@@ -98,7 +109,7 @@ run effectiveOriginSanityCheck {
          o1.defaultOrigin != o2.defaultOrigin
          o2 in o1.*canAccess
   }
-} for 4 but 1 NetworkEndpoint
+} for 4 but 1 NetworkEndpoint, 0 scriptDOM
 
 run firefoxAccessThroughDefaultOrigin{
  some disj o1, o2: documentDOM | {
@@ -107,7 +118,7 @@ run firefoxAccessThroughDefaultOrigin{
          o1.effectiveOrigin != o2.effectiveOrigin
          o2 in o1.*canAccess
   }
-} for 4 but 1 NetworkEndpoint
+} for 4 but 1 NetworkEndpoint, 0 scriptDOM
 
 
 run unauthorizedAccessForSpec {
@@ -118,7 +129,7 @@ run unauthorizedAccessForSpec {
          !isSubdomainOf[atk.defaultOrigin.dnslabel, vict.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
          canAccessChained[atk, vict]
   }
-} for 10 but 1 NetworkEndpoint
+} for 8 but 1 NetworkEndpoint, 0 scriptDOM
 
 run unauthorizedAccessForFirefox { //discovers the Firefox bug
   some disj vict, atk: documentDOM |  {
@@ -128,7 +139,7 @@ run unauthorizedAccessForFirefox { //discovers the Firefox bug
          !isSubdomainOf[atk.defaultOrigin.dnslabel, vict.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
          canAccessChained[atk, vict]
   }
-} for 3 but 1 NetworkEndpoint
+} for 3 but 1 NetworkEndpoint, 0 scriptDOM
 
 
 
