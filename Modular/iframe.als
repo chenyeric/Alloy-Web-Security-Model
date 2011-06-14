@@ -1,15 +1,28 @@
 //open basicDeclarations
 open DNSAndOrigin
 open SOPDeclarations
+//open CSP
 
+
+//--------------------------------FRAME----------------------------/
 sig Frame {
 	//context: one ScriptContext,
 	initiator: lone Frame,
 	dom : one documentDOM,
-	script: lone scriptDOM,
+	scripts: set scriptDOM,
 	parentFrame: lone Frame,
-	childFrame: set Frame
+	childFrame: set Frame,
+
+	//CSP policies
+	csp: lone CSPPolicies
 }
+
+sig CSPPolicies{
+	allowScript: set scriptDOM,
+	frameAncestor: set Origin,
+	frameSrc:set Origin
+}
+
 
 fact ParentChildRelation{
 	all pfrm, cfrm:Frame |{
@@ -35,14 +48,6 @@ sig Window {
   	contentFrames=top.*childFrame
 
 }
-
-check NoLoopInParentChildFrame{
-	no disj pfrm,cfrm:Frame, win:Window|{
-		(pfrm+cfrm) in win.contentFrames
-		pfrm in cfrm.^parentFrame
-		cfrm in pfrm.^parentFrame
-	}
-}for 5
 
 //each dom must belong to one and only one frame
 fact OneFramePerDom{
@@ -86,14 +91,6 @@ fact NoBidirectionalLoad{
 	}
 }
 
-run FramesAreSane{
-	some disj frm1, frm2:Frame{
-		some win:Window{
-			(frm1+frm2) in win.contentFrames
-			frm1 = win.top
-		}
-	}
-}for 2
 
 //=============W3 spec navigation policy=============/
 /*
@@ -133,29 +130,8 @@ fact W3NavPolicy{
 
 //TODO: additional fact for chrome frame 
 
-run topNavigationCanHappen{
-	some win:Window {
-		some disj cfrm,tfrm: Frame{
-			tfrm = win.top
-			cfrm in tfrm.*childFrame
-			cfrm = tfrm.initiator
-		}
-	}
-} for 4
 
-check CrossOriginNavigationForUnrelatedFramesShouldNotHappen{
-	no disj nav_frm, main_frm:Frame| {
-		nav_frm.dom in main_frm.dom.canNavigate // main frame can navigate nav frame
-		some disj main_win, nav_win:Window|{
-			nav_frm = nav_win.*contentFrames //nav frame is the top level frame
-			main_frm = main_win.*contentFrames
-		}
-		nav_frm.initiator!=main_frm // the frames are not initiated by each other
-		main_frm.initiator!=nav_frm
-		nav_frm.dom.effectiveOrigin != main_frm.dom.effectiveOrigin // this is a cross origin navigation
-	}
-} for 5
-
+//---------------------------------------------IFRAME SANDBOX---------------------/
 
 //define sandbox attributes
 enum iframe_sandbox_policy {NOT_ALLOW_SAME_ORIGIN, NOT_ALLOW_TOP_NAVIGATION, NOT_ALLOW_FORMS, NOT_ALLOW_SCRIPTS}
@@ -222,9 +198,55 @@ fact SandboxScriptPolicy{
 	//if allow script is not set, then the sandbox should not have a script element
 	all sandboxfrm:Frame{
 		NOT_ALLOW_SCRIPTS in most_strict_sandbox_policy[sandboxfrm] implies
-			no sandboxfrm.script
+			no sandboxfrm.scripts
 	}
 }
+
+
+//-----------------------------CHECKS FOR IFRAME + SANDBOX------------------------/
+
+//there should be no loops
+check NoLoopInParentChildFrame{
+	no disj pfrm,cfrm:Frame, win:Window|{
+		(pfrm+cfrm) in win.contentFrames
+		pfrm in cfrm.^parentFrame
+		cfrm in pfrm.^parentFrame
+	}
+}for 5
+
+
+run FramesAreSane{
+	some disj frm1, frm2:Frame{
+		some win:Window{
+			(frm1+frm2) in win.contentFrames
+			frm1 = win.top
+		}
+	}
+}for 2
+
+
+run topNavigationCanHappen{
+	some win:Window {
+		some disj cfrm,tfrm: Frame{
+			tfrm = win.top
+			cfrm in tfrm.*childFrame
+			cfrm = tfrm.initiator
+		}
+	}
+} for 4
+
+check CrossOriginNavigationForUnrelatedFramesShouldNotHappen{
+	no disj nav_frm, main_frm:Frame| {
+		nav_frm.dom in main_frm.dom.canNavigate // main frame can navigate nav frame
+		some disj main_win, nav_win:Window|{
+			nav_frm = nav_win.*contentFrames //nav frame is the top level frame
+			main_frm = main_win.*contentFrames
+		}
+		nav_frm.initiator!=main_frm // the frames are not initiated by each other
+		main_frm.initiator!=nav_frm
+		nav_frm.dom.effectiveOrigin != main_frm.dom.effectiveOrigin // this is a cross origin navigation
+	}
+} for 5
 
 //sandbox navigation policy checker
 check NestedAllowNavigationWorks{
@@ -265,7 +287,7 @@ check NestedAllowScriptPolicyWorks{
 			frm in sandboxfrm.*childFrame  //iframe sandbox sandboxes a frame
 			NOT_ALLOW_SCRIPTS in most_strict_sandbox_policy[sandboxfrm] //but the sandbox has scripts disabled
 		}implies
-			no frm.script //then the frame must also have scripts disabled
+			no frm.scripts //then the frame must also have scripts disabled
 	}
 }for 7
 
