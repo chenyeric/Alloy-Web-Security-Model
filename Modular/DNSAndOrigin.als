@@ -23,6 +23,16 @@ pred isSiblingDomainOf[s1:DNS, s2:DNS] {
   s1.parent = s2.parent
 }
 
+//a sig for DNS wildcards where only * is only allowed, only in the left-most, or more specific, position
+//Semantically, a DNSWildCard without a suffix is '*'.
+sig DNSWildCard{ 
+    suffix : lone DNS   // the portion after the *.    
+}
+
+run {
+  some d:DNSWildCard | no d.suffix}
+for 2
+
 sig NetworkEndpoint{}
 
 
@@ -43,4 +53,4 @@ fact DistinctOrigins {
 }
 
 //enum Port{P80,P8080}
-enum Schema{HTTP,HTTPS}
+enum Schema{HTTP,HTTPS, DATA}

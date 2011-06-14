@@ -21,9 +21,23 @@ fact accessOnlyThroughSameEnforcer { // if 2 objects are not in the same browser
 }
 
 
+/*****Different SOP Enforcer Flavors *********/
 abstract sig SOPEnforcer{}
+
 abstract sig FirefoxSOP extends SOPEnforcer{}
+one sig Firefox2SOP extends FirefoxSOP{}
+one sig Firefox3SOP extends FirefoxSOP{}
 one sig Firefox4SOP extends FirefoxSOP{}
+
+abstract sig IESOP extends SOPEnforcer{}
+one sig IE6SOP extends IESOP{}
+one sig IE7SOP extends IESOP{}
+
+one sig SafariSOP extends SOPEnforcer{}
+one sig OperaSOP extends SOPEnforcer{}
+one sig ChromeSOP extends SOPEnforcer{}
+one sig AndroidSOP extends SOPEnforcer{}
+
 one sig specSOP extends SOPEnforcer{}
 
 abstract sig DOMObject extends SOPObject {}
@@ -57,9 +71,9 @@ sig documentDOM extends DOMObject {
 
 fact SOPEnforcementForCanAccess {
   all disj o1, o2: documentDOM | {
-      o1.enforcer = specSOP => 
+      o1.enforcer !in FirefoxSOP => 
             o2 in o1.canAccess implies o1.effectiveOrigin = o2.effectiveOrigin
-      o1.enforcer = Firefox4SOP => 
+      o1.enforcer in FirefoxSOP => 
             o2 in o1.canAccess implies ( o1.effectiveOrigin = o2.effectiveOrigin or 
                                                         o1.defaultOrigin = o2.effectiveOrigin )
   }
@@ -79,8 +93,8 @@ check inLinescriptsAreSane{
 
 run effectiveOriginSanityCheck {
   some disj o1, o2: documentDOM | {
-         o1.enforcer = specSOP
-         o2.enforcer = specSOP
+         o1.enforcer = IE6SOP
+         o2.enforcer = IE6SOP
          o1.defaultOrigin != o2.defaultOrigin
          o2 in o1.*canAccess
   }

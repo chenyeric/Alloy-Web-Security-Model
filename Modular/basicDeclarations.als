@@ -1,5 +1,6 @@
 open util/ordering[Time]
 open DNSAndOrigin
+open HTTPHeaderDecls
 
 // turn this on for intermediate checks
 // run show {} for 6
@@ -102,23 +103,6 @@ fact ProcessContextRelation {
 
 
 
-abstract sig Method {}
-one sig GET extends Method {}
-one sig PUT  extends Method {}
-one sig POST extends Method {}
-one sig DELETE extends Method {}
-one sig OPTIONS extends Method {}
-
-fun safeMethods[]:set Method {
-	GET+OPTIONS
-}
-
-abstract sig HTTPHeader {}
-abstract sig HTTPResponseHeader extends HTTPHeader{} 
-abstract sig HTTPRequestHeader extends HTTPHeader{}
-abstract sig Status  {}
-abstract sig RedirectionStatus extends Status {}
-
 fact noOrphanedHeaders {
   all h:HTTPRequestHeader|some req:HTTPRequest|h in req.headers
   all h:HTTPResponseHeader|some resp:HTTPResponse|h in resp.headers
@@ -165,6 +149,9 @@ sig ScriptContext {
 	transactions.req.from = location
 }
 
+
+abstract sig Status  {}
+abstract sig RedirectionStatus extends Status {}
 
 
 
