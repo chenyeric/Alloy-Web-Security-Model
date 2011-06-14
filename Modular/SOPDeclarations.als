@@ -73,6 +73,7 @@ fact effectiveOriginLimitations {
   }
 }
 
+
 fact SOPEnforcementForCanAccess {
   all disj o1, o2: documentDOM | {
     some o2.effectiveOrigin => { //case where o2 sets document.domain
@@ -85,7 +86,7 @@ fact SOPEnforcementForCanAccess {
                    o1.defaultOrigin = o2.effectiveOrigin )
     }
     no o2.effectiveOrigin => { // case where o2 does not set document.origin
-      o2 in o1.canAccess implies (no o1.effectiveOrigin) and (o1.defaultOrigin = o2.defaultOrigin)
+      o2 in o1.canAccess implies {(no o1.effectiveOrigin) and (o1.defaultOrigin = o2.defaultOrigin)}
     }
   }
 }
