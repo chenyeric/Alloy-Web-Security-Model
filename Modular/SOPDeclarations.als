@@ -28,6 +28,7 @@ lone sig Firefox4SOP extends FirefoxSOP{}
 abstract sig IESOP extends SOPEnforcer{}
 lone sig IE6SOP extends IESOP{}
 lone sig IE7SOP extends IESOP{}
+lone sig IE8SOP extends IESOP{}
 
 lone sig SafariSOP extends SOPEnforcer{}
 lone sig OperaSOP extends SOPEnforcer{}
@@ -43,7 +44,6 @@ enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 
 //--------------------------------FRAME----------------------------/
 sig Frame extends SOPObject{
-	//context: one ScriptContext,
 	initiator: lone Frame,
 	dom : one documentDOM,
 	scripts: set scriptDOM,
@@ -56,17 +56,17 @@ sig Frame extends SOPObject{
     this in canAccess
 }
 
-//each dom must belong to one and only one frame
+
+//bijection btw frame and dom
 fact OneFramePerDom{
-	no this_dom:documentDOM | no this_dom.~dom // every dom must be linked with 1 frame
-	dom in Frame one -> one documentDOM // every frame has a unique dom
-	
+	no this_dom:documentDOM | no this_dom.~dom // onto
+	dom in Frame one -> one documentDOM // one-to-one
 }
 
-//each script belongs to only one frame
-fact OneFramePerScropt {
-    no s:scriptDOM | no s.~scripts
-    scripts in Frame one -> set scriptDOM
+//relationship between frame and script
+fact OneFramePerScript {
+    no s:scriptDOM | no s.~scripts //"onto", though scripts is not a function
+    scripts in Frame one -> set scriptDOM //one-to-many
 }
 
 

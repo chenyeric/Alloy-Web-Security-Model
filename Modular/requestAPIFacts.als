@@ -2,11 +2,11 @@ open requestAPI
 open cors
 
 fact FormOnlyDoesPostOrGet {
-	all t:ScriptContext.transactions | t.cause in FormElement implies t.req.method in GET + POST + PUT+ DELETE
+	all t:BrowsingContext.transactions | t.cause in FormElement implies t.req.method in GET + POST + PUT+ DELETE
 }
 
 fact {
-	all t:ScriptContext.transactions | t.cause in FormElement  and t.req.method in PUT+DELETE implies {
+	all t:BrowsingContext.transactions | t.cause in FormElement  and t.req.method in PUT+DELETE implies {
 			not ( isCrossOriginRequest[t.req] )
 			no t.(~cause)
 	}
@@ -15,12 +15,12 @@ fact {
 
 
 fact XHRNoCrossOriginRequestOrRedirect{
-	all t:ScriptContext.transactions |
+	all t:BrowsingContext.transactions |
 		t.^cause in (XMLHTTPRequest+HTTPTransaction) implies not isCrossOriginRequest[t.req]
 }
 
 fact XHR2_CrossOrigin {
-	all t:ScriptContext.transactions | 
+	all t:BrowsingContext.transactions | 
 		t.^cause in (XMLHTTPRequest2+HTTPTransaction) implies { 
 						CORSPreFlightRequestTransaction[t] 
 						or simpleCORSTransaction[t] 

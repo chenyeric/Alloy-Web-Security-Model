@@ -6,7 +6,7 @@ Goal #1: Describe the related origin attacker */
 
 
 fact cookiesSentOnlyToDomain {
-    no areq:ScriptContext.transactions.req | {
+    no areq:BrowsingContext.transactions.req | {
        (transactions.req.areq).location in Browser
        some cookies:((areq.headers & CookieHeader).thecookie) | 
              !isSubdomainOf[areq.host.dnslabel, cookies.domain]
