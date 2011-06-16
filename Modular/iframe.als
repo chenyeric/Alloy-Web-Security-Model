@@ -4,25 +4,6 @@ open SOPDeclarations
 //open CSP
 
 
-//--------------------------------FRAME----------------------------/
-sig Frame {
-	//context: one ScriptContext,
-	initiator: lone Frame,
-	dom : one documentDOM,
-	scripts: set scriptDOM,
-	parentFrame: lone Frame,
-	childFrame: set Frame,
-
-	//CSP policies
-	csp: lone CSPPolicies
-}
-
-sig CSPPolicies{
-	allowScript: set scriptDOM,
-	frameAncestor: set Origin,
-	frameSrc:set Origin
-}
-
 
 fact ParentChildRelation{
 	all pfrm, cfrm:Frame |{
@@ -49,13 +30,6 @@ sig Window {
 
 }
 
-//each dom must belong to one and only one frame
-fact OneFramePerDom{
-
-	no this_dom:documentDOM | no this_dom.~dom // every dom must be linked with 1 frame
-	dom in Frame one -> one documentDOM // every frame has a unique dom
-	
-}
 
 //all frames must be inside ONE and only ONE Window
 fact OneWindowOneDomPerFrame{
@@ -79,7 +53,7 @@ fact UserInitiatedFrames{
 fact InitiationImpliesCanNavigate{
 	all frm1, frm2:Frame|{
 		frm1.initiator=frm2 implies 
-			frm1.dom in frm2.dom.canNavigate
+			frm1 in frm2.canNavigate
 	}
 }
 
@@ -104,7 +78,7 @@ document has the same origin as the active document of A (possibly in fact being
 */
 fact W3NavPolicy{
 	all disj nav_frm, main_frm:Frame|{ 
-		nav_frm.dom in main_frm.dom.canNavigate implies ( //main frame can navigate nav frame if:
+		nav_frm in main_frm.canNavigate implies ( //main frame can navigate nav frame if:
 			nav_frm.dom.effectiveOrigin = main_frm.dom.effectiveOrigin or //1) they are from the same origin or,
 			some win:Window|{ //2) nav frm and main frm are in the same window and nav frm is the top frm
 				(nav_frm + main_frm) in win.contentFrames
@@ -112,7 +86,7 @@ fact W3NavPolicy{
 			} or
 			some win:Window|{ //3) nav is an auxilliary context and main is allowed to navigate nav's initiator
 				nav_frm = win.top
-				nav_frm.initiator.dom in main_frm.dom.canNavigate
+				nav_frm.initiator in main_frm.canNavigate
 			} or
 			some win:Window{
 				nav_frm != win.top //4) nav is not a top frame
@@ -159,7 +133,7 @@ fact SandboxNavigationPolicy{
 	all disj sandboxfrm, frm:Frame, win:Window|{
 		{
 			//sandboxfrm in IframeSandbox     
-			frm.dom in sandboxfrm.dom.canNavigate  //if sandbox can navigate a frame, then...
+			frm in sandboxfrm.canNavigate  //if sandbox can navigate a frame, then...
 		} implies{
 			(sandboxfrm+frm) in win.contentFrames //this frame must be in the same window as the sandbox and...
 			frm = win.top //this frame must be the top level frame
@@ -174,7 +148,7 @@ fact SandboxNavigationPolicy{
 			topfrm = win.top
 			NOT_ALLOW_TOP_NAVIGATION in most_strict_sandbox_policy[sandboxfrm]
 		} implies //if allow navi attr is not set
-			topfrm.dom not in sandboxfrm.dom.canNavigate //then top frame cannot be navigated by sandboxed frame
+			topfrm !in sandboxfrm.canNavigate //then top frame cannot be navigated by sandboxed frame
 	}
 }
 
@@ -237,7 +211,7 @@ run topNavigationCanHappen{
 
 check CrossOriginNavigationForUnrelatedFramesShouldNotHappen{
 	no disj nav_frm, main_frm:Frame| {
-		nav_frm.dom in main_frm.dom.canNavigate // main frame can navigate nav frame
+		nav_frm in main_frm.canNavigate // main frame can navigate nav frame
 		some disj main_win, nav_win:Window|{
 			nav_frm = nav_win.*contentFrames //nav frame is the top level frame
 			main_frm = main_win.*contentFrames
@@ -262,7 +236,7 @@ check NestedAllowNavigationWorks{
 		nestedfrm = frm.initiator
 
 		//topfrm.dom.effectiveOrigin = frm.dom.effectiveOrigin
-		topfrm.dom in frm.dom.canNavigate
+		topfrm in frm.canNavigate
 		
 	}
 } for 5

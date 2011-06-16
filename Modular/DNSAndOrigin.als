@@ -29,6 +29,8 @@ sig DNSWildCard{
     suffix : lone DNS   // the portion after the *.    
 }
 
+
+
 run {
   some d:DNSWildCard | no d.suffix}
 for 2

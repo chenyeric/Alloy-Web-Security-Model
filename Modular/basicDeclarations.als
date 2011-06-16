@@ -1,19 +1,10 @@
 open util/ordering[Time]
 open DNSAndOrigin
-open HTTPHeaderDecls
+open HTTPHdrDecls
 
 // turn this on for intermediate checks
 // run show {} for 6
 
-sig Time {}
-
-abstract sig Token {}
-
-abstract sig Secret extends Token {
-	madeBy : Principal,
-	expiration : lone Time,
-
-}
 
 // second.pre >= first.post
 pred happensBeforeOrdering[first:Event,second:Event]{
@@ -32,24 +23,29 @@ fact Traces{
 
 
 
-abstract sig Principal {
-// without the -HTTPClient the HTTPS check fails
-	servers : set NetworkEndpoint,
-	dnslabels : set DNS,
+abstract sig HTTPEvent extends NetworkEvent { host : Origin }
+
+
+abstract sig certificateAuthority{}
+one sig BADCA,GOODCA extends certificateAuthority{}
+
+sig Certificate {
+	ca : certificateAuthority,
+	cn : DNS,
+	ne : NetworkEndpoint
+}{
+
+	//GoodCAVerifiesNonTrivialDNSValues
+	ca in GOODCA and cn.parent != DNSRoot implies 
+			some p:Principal | {
+				cn in p.dnslabels
+				ne in p.servers
+				ne in cn.resolvesTo
+			}
 }
 
-fun getPrincipalFromDNS[dns : DNS]:Principal{
-	dnslabels.dns
-}
 
-fun getPrincipalFromOrigin[o: Origin]:Principal{
-	getPrincipalFromDNS[o.dnslabel]
-}
-
-fact DNSIsDisjointAmongstPrincipals {
-	all disj p1,p2 : Principal | (no (p1.dnslabels & p2.dnslabels)) and ( no (p1.servers & p2.servers)) 
-//The servers disjointness is a problem for virtual hosts. We will replace it with disjoint amongst attackers and trusted people or something like that
-}
+sig Time {}
 
 abstract sig Event {pre,post : Time} { }
 
@@ -58,49 +54,10 @@ abstract sig NetworkEvent extends Event {
     to: NetworkEndpoint
 }
 
-// we don't make HTTPServer abstract, it will be defined by the owner
 
-abstract sig HTTPConformist extends NetworkEndpoint{}
-sig HTTPServer extends HTTPConformist{}
-abstract sig HTTPClient extends HTTPConformist{ 
-  owner:WebPrincipal // owner of the HTTPClient process
-}
-sig Browser extends HTTPClient {
-	trustedCA : set certificateAuthority,
-    engines: set RenderingEngine
-}
-
-//this ensures each engine only in 1 browser
-//also each engine has a browser
-fact RenderingEngineRelation {
-  all b:Browser, p:RenderingEngine |
-      p in b.engines iff p.inBrowser = b
-}
-
-sig InternetExplorer extends Browser{}
-sig InternetExplorer7 extends InternetExplorer{}
-sig InternetExplorer8 extends InternetExplorer{}
-sig Firefox extends Browser{}
-sig Firefox3 extends Firefox {}
-sig Safari extends Browser{}
-
-/* JHB 2-3-11 Browser RenderingEngines */
-sig RenderingEngine { 
-   contexts: set ScriptContext,
-   inBrowser : one Browser 
-}
-
-sig AppRenderingEngine extends RenderingEngine{}
-//sig RegRenderingEngine extends RenderingEngine{}
-
-//this ensures each context only in 1 process
-//also each context has a process
-fact ProcessContextRelation {
-  all c:ScriptContext, p: RenderingEngine |
-       c in p.contexts iff c.engine = p
-}
-/**********************************/
-
+//////////////////
+//////////////////
+//////////////////
 
 
 fact noOrphanedHeaders {
@@ -108,11 +65,6 @@ fact noOrphanedHeaders {
   all h:HTTPResponseHeader|some resp:HTTPResponse|h in resp.headers
 }
 
-//////////////////
-//////////////////
-//////////////////
-
-abstract sig HTTPEvent extends NetworkEvent { host : Origin }
 
 sig URL {path:Path, host:Origin}
 
@@ -138,18 +90,6 @@ sig HTTPResponse extends HTTPEvent {
 }
 
 
-// Browsers run a scriptContext
-sig ScriptContext { 
-	owner : Origin,
-	location : Browser,
-    engine : one RenderingEngine,
-	transactions: set HTTPTransaction
-}{
-// Browsers are honest, they set the from correctly
-	transactions.req.from = location
-}
-
-
 abstract sig Status  {}
 abstract sig RedirectionStatus extends Status {}
 
@@ -170,8 +110,82 @@ sig LocationHeader extends HTTPResponseHeader {
   params : set attributeNameValuePair  // URL request parameters
 }
 
+abstract sig Token {}
+
+
+
+sig Path{}
+sig INDEX,HOME,SENSITIVE, PUBLIC, LOGIN,LOGOUT,REDIRECT, ENTRY_POINT extends Path{}
+sig PATH_TO_COMPROMISE extends SENSITIVE {}
+
+
+
+abstract sig HTTPConformist extends NetworkEndpoint{}
+sig HTTPServer extends HTTPConformist{}
+abstract sig HTTPClient extends HTTPConformist{ 
+  owner:WebPrincipal // owner of the HTTPClient process
+}
+sig Browser extends HTTPClient {
+	trustedCA : set certificateAuthority,
+    engines: set RenderingEngine
+}
+
+//this ensures each engine only in 1 browser
+fact RenderingEngineRelation {
+  all b:Browser, p:RenderingEngine |
+      p in b.engines iff p.inBrowser = b
+}
+
+abstract sig InternetExplorer extends Browser{}
+sig InternetExplorer6 extends InternetExplorer{}
+sig InternetExplorer7 extends InternetExplorer{}
+sig InternetExplorer8 extends InternetExplorer{}
+abstract sig Firefox extends Browser{}
+sig Firefox2 extends Firefox {}
+sig Firefox3 extends Firefox {}
+sig Firefox4 extends Firefox {}
+sig Safari extends Browser{}
+sig Chrome extends Browser{}
+sig Android extends Browser{}
+sig Opera extends Browser{}
+
+/* JHB 2-3-11 Browser RenderingEngines */
+sig RenderingEngine { 
+   contexts: set BrowsingContext,
+   inBrowser : one Browser //each engine has a browser
+} {
+  contexts.@location = inBrowser
+}
+
+sig AppRenderingEngine extends RenderingEngine{}
+//sig RegRenderingEngine extends RenderingEngine{}
+
+//this ensures each context only in 1 process
+//also each context has a process
+fact ProcessContextRelation {
+  all c:BrowsingContext, p: RenderingEngine |
+       c in p.contexts iff c.engine = p
+}
+/**********************************/
+
+
+
+
 abstract sig RequestAPI // extends Event 
 {} 
+
+
+// Browsers run a BrowsingContext -- now trying to integrate this with the SOP stuff.
+sig BrowsingContext { 
+	owner : Origin,
+	location : Browser,
+    engine : one RenderingEngine,
+	transactions: set HTTPTransaction
+}{
+// Browsers are honest, they set the from correctly
+	transactions.req.from = location
+}
+
 
 sig HTTPTransaction {
 	req : HTTPRequest,
@@ -190,39 +204,35 @@ sig HTTPTransaction {
 
 }
 
-fact CauseHappensBeforeConsequence  {
-	all t1: HTTPTransaction | some (t1.cause) implies {
-       (some t0:HTTPTransaction | (t0 in t1.cause and happensBeforeOrdering[t0.resp, t1.req]))  
-       or (some r0:RequestAPI | (r0 in t1.cause ))
-       // or (some r0:RequestAPI | (r0 in t1.cause and happensBeforeOrdering[r0, t1.req]))
-    }
-}
 
-fun getTrans[e:HTTPEvent]:HTTPTransaction{
-	(req+resp).e
-}
 
-fun getScriptContext[t:HTTPTransaction]:ScriptContext {
-		transactions.t
+
+abstract sig Secret extends Token {
+	madeBy : Principal,
+	expiration : lone Time,
+
 }
 
 
 
-
-fun getContextOf[request:HTTPRequest]:Origin {
-	(transactions.(req.request)).owner
+abstract sig Principal {
+// without the -HTTPClient the HTTPS check fails
+	servers : set NetworkEndpoint,
+	dnslabels : set DNS,
 }
 
-pred isCrossOriginRequest[request:HTTPRequest]{
-		getContextOf[request].schema != request.host.schema or
-		getContextOf[request].dnslabel != request.host.dnslabel
+fun getPrincipalFromDNS[dns : DNS]:Principal{
+	dnslabels.dns
 }
 
+fun getPrincipalFromOrigin[o: Origin]:Principal{
+	getPrincipalFromDNS[o.dnslabel]
+}
 
-
-sig Path{}
-sig INDEX,HOME,SENSITIVE, PUBLIC, LOGIN,LOGOUT,REDIRECT, ENTRY_POINT extends Path{}
-sig PATH_TO_COMPROMISE extends SENSITIVE {}
+fact DNSIsDisjointAmongstPrincipals {
+	all disj p1,p2 : Principal | (no (p1.dnslabels & p2.dnslabels)) and ( no (p1.servers & p2.servers)) 
+//The servers disjointness is a problem for virtual hosts. We will replace it with disjoint amongst attackers and trusted people or something like that
+}
 
 sig User extends WebPrincipal { } 
 
@@ -230,53 +240,6 @@ lone sig Alice extends WebPrincipal {}
 lone sig Mallory extends WEBATTACKER {}
 
 
-
-abstract sig certificateAuthority{}
-one sig BADCA,GOODCA extends certificateAuthority{}
-
-sig Certificate {
-	ca : certificateAuthority,
-	cn : DNS,
-	ne : NetworkEndpoint
-}{
-
-	//GoodCAVerifiesNonTrivialDNSValues
-	ca in GOODCA and cn.parent != DNSRoot implies 
-			some p:Principal | {
-				cn in p.dnslabels
-				ne in p.servers
-				ne in cn.resolvesTo
-			}
-}
-
-
-
-/***********************
-
-HTTP Facts
-
-************************/
-
-
-fact scriptContextsAreSane {
-	all disj sc,sc':ScriptContext | no (sc.transactions & sc'.transactions)
-	all t:HTTPTransaction | t.req.from in Browser implies t in ScriptContext.transactions
-}
-
-
-fact HTTPTransactionsAreSane {
-	all disj t,t':HTTPTransaction | no (t.resp & t'.resp ) and no (t.req & t'.req)
-}
-
-
-
-
-
-/**************************** 
-
-HTTPServer Definitions 
-
-****************************/
 
 lone sig ACTIVEATTACKER extends Principal{}
 
@@ -298,6 +261,65 @@ lone sig GOOD extends NormalPrincipal{}
 lone sig SECURE extends NormalPrincipal{}
 
 
+
+// we don't make HTTPServer abstract, it will be defined by the owner
+
+
+
+
+fact CauseHappensBeforeConsequence  {
+	all t1: HTTPTransaction | some (t1.cause) implies {
+       (some t0:HTTPTransaction | (t0 in t1.cause and happensBeforeOrdering[t0.resp, t1.req]))  
+       or (some r0:RequestAPI | (r0 in t1.cause ))
+       // or (some r0:RequestAPI | (r0 in t1.cause and happensBeforeOrdering[r0, t1.req]))
+    }
+}
+
+fun getTrans[e:HTTPEvent]:HTTPTransaction{
+	(req+resp).e
+}
+
+fun getBrowsingContext[t:HTTPTransaction]:BrowsingContext {
+		transactions.t
+}
+
+
+
+
+fun getContextOf[request:HTTPRequest]:Origin {
+	(transactions.(req.request)).owner
+}
+
+pred isCrossOriginRequest[request:HTTPRequest]{
+		getContextOf[request].schema != request.host.schema or
+		getContextOf[request].dnslabel != request.host.dnslabel
+}
+
+
+
+
+
+
+
+
+/***********************
+
+HTTP Facts
+
+************************/
+
+
+fact scriptContextsAreSane {
+	all disj sc,sc':BrowsingContext | no (sc.transactions & sc'.transactions)
+	all t:HTTPTransaction | t.req.from in Browser implies t in BrowsingContext.transactions
+}
+
+
+fact HTTPTransactionsAreSane {
+	all disj t,t':HTTPTransaction | no (t.resp & t'.resp ) and no (t.req & t'.req)
+}
+
+
 fact NonActiveFollowHTTPRules {
 // Old rule was :
 //	all t:HTTPTransaction | t.resp.from in HTTPServer implies t.req.host.server = t.resp.from
@@ -308,7 +330,7 @@ fact NonActiveFollowHTTPRules {
 fact SecureIsHTTPSOnly {
 // Add to this the fact that transaction schema is consistent
 	all httpevent:HTTPEvent | httpevent.from in SECURE.servers implies httpevent.host.schema = HTTPS
-//	STS Requirement : all sc : ScriptContext | some (getPrincipalFromOrigin[sc.owner] & SECURE ) implies sc.transactions.req.host.schema=HTTPS
+//	STS Requirement : all sc : BrowsingContext | some (getPrincipalFromOrigin[sc.owner] & SECURE ) implies sc.transactions.req.host.schema=HTTPS
 }
 
 
@@ -469,7 +491,7 @@ run somePasswordExists for 8
 
 
 pred basicModelIsConsistent {
-  some ScriptContext
+  some BrowsingContext
   some t1:HTTPTransaction |{
     some (t1.req.from & Browser ) and
     some (t1.resp)

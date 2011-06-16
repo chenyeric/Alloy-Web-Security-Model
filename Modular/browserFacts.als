@@ -13,7 +13,7 @@ fact BrowsersTrustGoodCAOnly{
 }
 
 fact OriginHeaders {
-	all t:ScriptContext.transactions | (transactions.t).location in OriginDraftConformingBrowsers implies {
+	all t:BrowsingContext.transactions | (transactions.t).location in OriginDraftConformingBrowsers implies {
 		let t'=t.cause | {
 			t' in RequestAPI implies (transactions.t).owner = (t.req.headers & OriginHeader).theorigin
 			t' in HTTPTransaction implies (t.req.headers & OriginHeader).theorigin = t'.resp.host + (t'.req.headers & OriginHeader).theorigin 
@@ -37,7 +37,7 @@ pred correctHTTPSTransaction[t:HTTPTransaction] {
 }
 // smartClients don't click through errors, others do
 fact browserDropsBadlyCertifiedPackets {
-	all t : ScriptContext.transactions | t.req.host.schema=HTTPS and 	t.req.from in smartClient implies correctHTTPSTransaction[t]
+	all t : BrowsingContext.transactions | t.req.host.schema=HTTPS and 	t.req.from in smartClient implies correctHTTPSTransaction[t]
 }
 
 run show{} for 6 but exactly 6 Time
@@ -57,8 +57,8 @@ pred sameOrigin[o1:Origin , o2:Origin]{
 fact BrowserRedirectionFact {
 all first,second:HTTPTransaction | first=second.cause implies {
 // you are either in the same scriptcontext or you are in no particular scriptcontext
-			some sc :ScriptContext | first+second in sc.transactions or no ((first+second) & ScriptContext.transactions)
-			//same from is implied by same ScriptContext
+			some sc :BrowsingContext | first+second in sc.transactions or no ((first+second) & BrowsingContext.transactions)
+			//same from is implied by same BrowsingContext
 			some first.resp
 			happensBeforeOrdering[first.resp,second.req]
 //			some (second & (transactions.first).transactions) //the second is in the same scriptContext

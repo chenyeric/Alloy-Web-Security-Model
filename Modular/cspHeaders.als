@@ -1,4 +1,4 @@
-open HTTPHeaderDecls
+open HTTPHdrDecls
 open DNSAndOrigin
 
 /******** The headers for bootstrapping CSP ******************/
