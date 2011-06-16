@@ -15,6 +15,7 @@ fact CSPAllowScripts{
 		some frm.csp and script not in frm.csp.allowScript implies 
 			script not in frm.scripts
 
+
 		//incorrect mime types may not execute
 		{
 			some frm.csp
