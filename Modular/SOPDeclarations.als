@@ -50,12 +50,15 @@ sig Frame extends SOPObject{
 	parentFrame: lone Frame,
 	childFrame: set Frame,
     mimeType:  one MIMEType,
+	attribute: set FrameAttribute,
 }
 { 
     this in canNavigate
     this in canAccess
 }
 
+//certain security policies require frames to opt-in to their policy, i.e., BEEP
+enum FrameAttribute{BEEP}
 
 //bijection btw frame and dom
 fact OneFramePerDom{
@@ -87,7 +90,7 @@ sig scriptDOM {
 }
 
 //varrious attrbutes for scripts, ie inline, sanitized, etc
-enum scriptAttribute {INLINE}
+enum scriptAttribute {INLINE, SANITIZED}
 
 fact scriptDocumentRelation {
   all s:scriptDOM, d: scripts.s.dom | {
