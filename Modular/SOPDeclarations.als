@@ -50,12 +50,15 @@ sig Frame extends SOPObject{
 	parentFrame: lone Frame,
 	childFrame: set Frame,
     mimeType:  one MIMEType,
+	attribute: set FrameAttribute,
 }
 { 
     this in canNavigate
     this in canAccess
 }
 
+//certain security policies require frames to opt-in to their policy, i.e., BEEP
+enum FrameAttribute{BEEP}
 
 
 
@@ -87,8 +90,7 @@ sig scriptDOM {
 }
 
 //varrious attrbutes for scripts, ie inline, sanitized, etc
-enum scriptAttribute {INLINE}
-
+enum scriptAttribute {INLINE, SANITIZED}
 
 fact scriptDocumentRelation {
   all s:scriptDOM, d: scripts.s.dom | {
@@ -103,17 +105,13 @@ sig documentDOM {
    defaultOrigin : one Origin ,
    effectiveOrigin : lone Origin  // the effective origin is from document.domain, which can also be unused.
 }
-
-fact effectiveOriginLimitations {
-  all d:documentDOM | {
-     some d.effectiveOrigin => {
-       //d.defaultOrigin.port = d.effectiveOrigin.port
-       d.defaultOrigin.schema = d.effectiveOrigin.schema
-       isSubdomainOf[d.defaultOrigin.dnslabel, d.effectiveOrigin.dnslabel]
-     }
-  }
+{
+  //model the shortening of document.domain
+  //what is allowed may be browser dependent
+  //defaultOrigin.port = effectiveOrigin.port
+  defaultOrigin.schema = effectiveOrigin.schema
+  isSubdomainOf[defaultOrigin.dnslabel, effectiveOrigin.dnslabel]
 }
-
 
 fact SOPEnforcementForCanAccess {
   all disj f1, f2: Frame | {
@@ -135,6 +133,7 @@ fact SOPEnforcementForCanAccess {
              ( f1.dom.defaultOrigin = f2.dom.defaultOrigin)
        }
     }
+
   }
 }
 
@@ -163,6 +162,7 @@ run effectiveOriginSanityCheck {
   }
 } for 3
 
+
 run firefoxAccessThroughDefaultOrigin{
  some disj o1, o2: Frame | {
          o1.enforcer = Firefox4SOP
@@ -170,7 +170,9 @@ run firefoxAccessThroughDefaultOrigin{
          o1.dom.effectiveOrigin != o2.dom.effectiveOrigin
          o2 in o1.*canAccess
   }
+
 } for 3 but 1 NetworkEndpoint
+
 
 
 run unauthorizedAccessForSpec {
@@ -182,6 +184,7 @@ run unauthorizedAccessForSpec {
          canAccessChained[atk, vict]
   }
 } for 8 but 1 NetworkEndpoint
+
 
 run unauthorizedAccessForFirefox { //discovers the Firefox bug
   some disj vict, atk: Frame |  {
