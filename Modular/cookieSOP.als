@@ -1,6 +1,6 @@
 open cookieSigs as c
 open util/boolean as b
-open SOPDeclarations
+open SOPDeclarations as s
 
 sig FrameWithCookieSOP extends Frame {
     didSetCookie : set Cookie, -- the defaultOrigin of this frame set these cookies
@@ -46,6 +46,15 @@ fact CookieSetConstraints {
   }
 }
 
+
+check noImproperCookieDomainSetting {
+   no c:Cookie, f:FrameWithCookieSOP | {
+       c in f.didSetCookie
+       f.dom.defaultOrigin.dnslabel != c.domain
+       isSubdomainOf[c.domain, f.dom.defaultOrigin.dnslabel] //domain setting got more specific
+   }
+} for 8
+
 check noJSAccessOfHTTPonly {
     no c:Cookie | {
         isTrue[c.httponly]
@@ -66,7 +75,7 @@ run siblingdomainOverwriteExists {
       c in f1.didSetCookie
       c in f2.canOverwriteCookie
    }
-} for 3
+} for 4
 
 run siblingDomainConfusionExists {
    some disj f1,f2: FrameWithCookieSOP, c1,c2:Cookie | {
