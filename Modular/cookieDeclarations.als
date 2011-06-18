@@ -55,8 +55,8 @@ pred httpPacketHasCookie[c:Cookie,httpevent:HTTPRequest+HTTPResponse]{
 				(httpevent in HTTPResponse and c in (httpevent.headers & SetCookieHeader).thecookie)
 }
 
-pred hasKnowledgeViaUnencryptedHTTPEvent[c: Cookie, ne : NetworkEndpoint, usageEvent: Event]{
-		ne !in WebPrincipal.servers + Browser
+pred hasKnowledgeViaUnencryptedHTTPEvent[c: Cookie, ne : NetworkEndpoint, usageEvent: Event]{ 
+		ne !in WebPrincipal.servers + Browser //Question: should there be a line that relates ne to httpevent?
 		some httpevent : HTTPEvent | {
 			happensBeforeOrdering[httpevent,usageEvent]
 			httpevent.host.schema = HTTP

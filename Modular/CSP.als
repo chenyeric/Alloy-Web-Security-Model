@@ -23,6 +23,10 @@ fact CSPAllowScripts{
 		some frm.csp and INLINE in script.attribute	implies
 			script not in frm.csp.allowScript
 
+		//ALL whitelisted scripts are SAFE
+		some frm.csp and SANITIZED not in script.attribute implies
+			script not in frm.csp.allowScript
+
 		//only whitelisted scripts may execute
 		some frm.csp and script not in frm.csp.allowScript implies 
 			script not in frm.scripts
