@@ -1,7 +1,7 @@
 open util/ordering[Time]
 open DNSAndOrigin
 open HTTPHdrDecls
-open cookieDeclarations
+
 //open principalDecls
 // turn this on for intermediate checks
 // run show {} for 6
@@ -220,11 +220,6 @@ pred isCrossOriginRequest[request:HTTPRequest]{
 
 
 
-abstract sig Secret extends Token {
-	madeBy : Principal,
-	expiration : lone Time,
-
-}
 
 abstract sig Principal {
 // without the -HTTPClient the HTTPS check fails
@@ -352,6 +347,8 @@ fun smartClient[]:set Browser {
   Firefox3 + InternetExplorer8 
 }
 
+sig Path{}
+
 // Ideally want tp use the old Principals thing
 
 
@@ -452,6 +449,21 @@ sig WWWAuthnHeader extends HTTPResponseHeader{}{
 
 */
 
+
+abstract sig Token {}
+
+
+
+
+abstract sig Secret extends Token {
+	madeBy : Principal,
+	expiration : lone Time,
+
+}
+
+
+
+
 sig UserToken extends Secret {
         id : WebPrincipal
 }
@@ -461,11 +473,14 @@ sig UserPassword extends UserToken { }
 
 // sig AliceUserPassword extends UserPassword {} {id = Alice and madeBy in Alice }
 
+
+
 pred somePasswordExists {
   some UserPassword //|p.madeBy in Alice
 }
 
 run somePasswordExists for 8
+
 
 
 pred basicModelIsConsistent {

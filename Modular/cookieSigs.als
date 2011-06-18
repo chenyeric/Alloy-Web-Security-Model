@@ -17,8 +17,6 @@ sig Cookie {  //extends Secret {
                                  domain.parent != DNSRoot }
 }
 
-
-
 pred DomainInCookieScope [d:DNS, c:Cookie] {
     (no c.domain and d=c.setBy.dnslabel)  or //no wildcards when domain is not set.  exact match only
     (some c.domain and isSubdomainOf[d, c.domain]) // isSubdomainOf is inclusive
