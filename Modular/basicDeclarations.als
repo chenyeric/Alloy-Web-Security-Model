@@ -1,10 +1,19 @@
 open util/ordering[Time]
 open DNSAndOrigin
 open HTTPHdrDecls
-
+open cookieDeclarations
+open principalDecls
 // turn this on for intermediate checks
 // run show {} for 6
 
+sig Time {}
+
+abstract sig Event {pre,post : Time} { }
+
+abstract sig NetworkEvent extends Event {
+    from: NetworkEndpoint,
+    to: NetworkEndpoint
+}
 
 // second.pre >= first.post
 pred happensBeforeOrdering[first:Event,second:Event]{
@@ -45,14 +54,7 @@ sig Certificate {
 }
 
 
-sig Time {}
 
-abstract sig Event {pre,post : Time} { }
-
-abstract sig NetworkEvent extends Event {
-    from: NetworkEndpoint,
-    to: NetworkEndpoint
-}
 
 
 //////////////////
@@ -89,18 +91,11 @@ sig HTTPResponse extends HTTPEvent {
   from in host.dnslabel.resolvesTo
 }
 
-
 abstract sig Status  {}
 abstract sig RedirectionStatus extends Status {}
 
-
-
 lone sig c301,c302,c303,c304,c305,c306,c307 extends RedirectionStatus {}
 lone sig c200,c401 extends Status{}
-sig location extends HTTPResponseHeader {targetOrigin : Origin, targetPath : Path}
-// The name location above easily conflicts with other attributes and variables with the same name. 
-// We should follow the convention of starting type names with a capital letter.
-// Address this in later clean-up.
 
 sig attributeNameValuePair { name: Token, value: Token}
 
@@ -110,13 +105,10 @@ sig LocationHeader extends HTTPResponseHeader {
   params : set attributeNameValuePair  // URL request parameters
 }
 
-abstract sig Token {}
 
 
 
-sig Path{}
-sig INDEX,HOME,SENSITIVE, PUBLIC, LOGIN,LOGOUT,REDIRECT, ENTRY_POINT extends Path{}
-sig PATH_TO_COMPROMISE extends SENSITIVE {}
+
 
 
 
@@ -168,12 +160,8 @@ fact ProcessContextRelation {
 }
 /**********************************/
 
-
-
-
 abstract sig RequestAPI // extends Event 
 {} 
-
 
 // Browsers run a BrowsingContext -- now trying to integrate this with the SOP stuff.
 sig BrowsingContext { 
@@ -205,6 +193,31 @@ sig HTTPTransaction {
 }
 
 
+fact CauseHappensBeforeConsequence  {
+	all t1: HTTPTransaction | some (t1.cause) implies {
+       (some t0:HTTPTransaction | (t0 in t1.cause and happensBeforeOrdering[t0.resp, t1.req]))  
+       or (some r0:RequestAPI | (r0 in t1.cause ))
+       // or (some r0:RequestAPI | (r0 in t1.cause and happensBeforeOrdering[r0, t1.req]))
+    }
+}
+
+fun getTrans[e:HTTPEvent]:HTTPTransaction{
+	(req+resp).e
+}
+
+fun getBrowsingContext[t:HTTPTransaction]:BrowsingContext {
+		transactions.t
+}
+
+fun getContextOf[request:HTTPRequest]:Origin {
+	(transactions.(req.request)).owner
+}
+
+pred isCrossOriginRequest[request:HTTPRequest]{
+		getContextOf[request].schema != request.host.schema or
+		getContextOf[request].dnslabel != request.host.dnslabel
+}
+
 
 
 abstract sig Secret extends Token {
@@ -212,8 +225,6 @@ abstract sig Secret extends Token {
 	expiration : lone Time,
 
 }
-
-
 
 abstract sig Principal {
 // without the -HTTPClient the HTTPS check fails
@@ -264,45 +275,7 @@ abstract sig NormalPrincipal extends WebPrincipal{} { 	dnslabels.resolvesTo in s
 lone sig GOOD extends NormalPrincipal{}
 lone sig SECURE extends NormalPrincipal{}
 
-
-
 // we don't make HTTPServer abstract, it will be defined by the owner
-
-
-
-
-fact CauseHappensBeforeConsequence  {
-	all t1: HTTPTransaction | some (t1.cause) implies {
-       (some t0:HTTPTransaction | (t0 in t1.cause and happensBeforeOrdering[t0.resp, t1.req]))  
-       or (some r0:RequestAPI | (r0 in t1.cause ))
-       // or (some r0:RequestAPI | (r0 in t1.cause and happensBeforeOrdering[r0, t1.req]))
-    }
-}
-
-fun getTrans[e:HTTPEvent]:HTTPTransaction{
-	(req+resp).e
-}
-
-fun getBrowsingContext[t:HTTPTransaction]:BrowsingContext {
-		transactions.t
-}
-
-
-
-
-fun getContextOf[request:HTTPRequest]:Origin {
-	(transactions.(req.request)).owner
-}
-
-pred isCrossOriginRequest[request:HTTPRequest]{
-		getContextOf[request].schema != request.host.schema or
-		getContextOf[request].dnslabel != request.host.dnslabel
-}
-
-
-
-
-
 
 
 
@@ -471,12 +444,13 @@ fact allowedXMLHTTPRequestHeaders{
 
 }
 
-*/
+
 
 sig WWWAuthnHeader extends HTTPResponseHeader{}{
   all resp:HTTPResponse| (some (WWWAuthnHeader & resp.headers)) => resp.statusCode=c401
 }
 
+*/
 
 sig UserToken extends Secret {
         id : WebPrincipal

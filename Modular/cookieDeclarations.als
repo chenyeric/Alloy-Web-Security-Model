@@ -1,4 +1,5 @@
 open basicDeclarations
+open cookieSigs
 
 
 /* Enforce a common semantic between the
@@ -12,12 +13,14 @@ Cookie Stuff
 ****************************/
 
 
+abstract sig Token {}
+
 sig Cookie extends Secret {
 	name : Token,
 	value : Token,
 	domain : DNS,
 	path : Path,
-}{}
+ }{}
 
 sig SecureCookie extends Cookie {}
 

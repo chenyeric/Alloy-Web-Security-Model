@@ -60,6 +60,8 @@ sig Frame extends SOPObject{
 //certain security policies require frames to opt-in to their policy, i.e., BEEP
 enum FrameAttribute{BEEP}
 
+
+
 //bijection btw frame and dom
 fact OneFramePerDom{
 	no this_dom:documentDOM | no this_dom.~dom // onto
@@ -71,8 +73,6 @@ fact OneFramePerScript {
     no s:scriptDOM | no s.~scripts //"onto", though scripts is not a function
     scripts in Frame one -> set scriptDOM //one-to-many
 }
-
-
 
 
 //abstract sig DOMObject extends SOPObject {}
@@ -190,11 +190,12 @@ run unauthorizedAccessForFirefox { //discovers the Firefox bug
   some disj vict, atk: Frame |  {
          vict.enforcer = Firefox4SOP
          atk.enforcer = Firefox4SOP
+         no intermediate:Frame | {intermediate != vict and intermediate.dom.defaultOrigin = vict.dom.defaultOrigin}
          vict.dom.defaultOrigin = vict.dom.effectiveOrigin // victim sets effective = default
          !isSubdomainOf[atk.dom.defaultOrigin.dnslabel, vict.dom.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
          canAccessChained[atk, vict]
   }
-} for 3 but 1 NetworkEndpoint
+} for 4 but 1 NetworkEndpoint
 
 
 
