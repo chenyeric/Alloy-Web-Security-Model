@@ -35,5 +35,16 @@ fact BrowserSOPEnforcerRelation {
    }
 }
 
+//----------------SSL ------------/
+fact HTTPSIsLinkedWithCertificate{
+
+	all origin:Origin|{
+		HTTPS = origin.scheme implies {
+
+		}
+	}
+
+}
+
 run {some p:FrameOnNetwork|some p} 
 for 6
