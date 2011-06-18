@@ -55,11 +55,11 @@ check ActiveAttackerCannotAccessHTTPSDOM{
 	//------- Attacker ------/
 	no frm:Frame | {
 		HTTPS = frm.dom.effectiveOrigin.schema //the document is served with HTTPS
-		frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabel // if the document belongs to a good principal
+		frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabels // if the document belongs to a good principal
 	
 		some script:scriptDOM |{
 			script in frm.scripts
-			script.embeddedOrigin.dnslabel in ACTIVEATTACKER
+			script.embeddedOrigin.dnslabel in ACTIVEATTACKER.dnslabels
 		}
 
 	}
