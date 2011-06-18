@@ -2,6 +2,10 @@ open DNSAndOrigin
 open SOPDeclarations
 open iframe
 open CSP
+open SOPAndNetworkConnector
+
+
+//--------------------------------- XSS ATTACKER--------------------------/
 
 fact BEEP{
 	all frm:Frame,script:scriptDOM|{
@@ -35,3 +39,36 @@ check XSSAttackCannotHappenInBeep{
 		(SANITIZED not in script.attribute) or (INLINE in script.attribute)
 	}
 }for 4
+
+//------------------------------Active Attacker -----------------------------/
+//a document is vulnerable to active attackers if:
+//1) A script that is served by an Attacker's PRINCIPAL is inside the victim's dom
+check ActiveAttackerCannotAccessHTTPSDOM{
+	no frm:Frame | {
+		HTTPS = frm.dom.effectiveOrigin.Schema //the document is served with HTTPS
+		frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabel // if the document belongs to a good principal
+	
+		some script:Script |{
+			script in frm.scripts
+			script.embeddedOrigin.dnslabel in ACTIVEATTACKER
+		}
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

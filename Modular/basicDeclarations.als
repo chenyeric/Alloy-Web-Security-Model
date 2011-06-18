@@ -230,8 +230,12 @@ fun getPrincipalFromOrigin[o: Origin]:Principal{
 }
 
 fact DNSIsDisjointAmongstPrincipals {
-	all disj p1,p2 : Principal | (no (p1.dnslabels & p2.dnslabels)) and ( no (p1.servers & p2.servers)) 
+	//TODO: below is the old definition
+	//all disj p1,p2 : Principal | (no (p1.dnslabels & p2.dnslabels)) and ( no (p1.servers & p2.servers)) 
 //The servers disjointness is a problem for virtual hosts. We will replace it with disjoint amongst attackers and trusted people or something like that
+
+	//This is the new definition taking DNS rebinding attack into account
+	all disj p1,p2 : Principal | no (p1.servers & p2.servers)
 }
 
 sig User extends WebPrincipal { } 
