@@ -38,9 +38,9 @@ fact BrowserSOPEnforcerRelation {
 //----------------SSL ------------/
 fact HTTPSIsLinkedWithCertificate{
 
-	all origin:Origin|{
-		HTTPS = origin.scheme implies {
-
+	all fn:FrameOnNetwork|{
+		HTTPS = fn.dom.effectiveOrigin.scheme implies {
+			some Certificate in fn.context.transactions.cert
 		}
 	}
 
