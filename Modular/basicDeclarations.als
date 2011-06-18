@@ -2,7 +2,7 @@ open util/ordering[Time]
 open DNSAndOrigin
 open HTTPHdrDecls
 open cookieDeclarations
-open principalDecls
+//open principalDecls
 // turn this on for intermediate checks
 // run show {} for 6
 
