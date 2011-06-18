@@ -1,19 +1,5 @@
-//open basicDeclarations
-open cookieSigs
-
-
-/* Enforce a common semantic between the
-    to, from, and host of HTTP Requests and HTTP Responses */
-
-
-
-
-/****************************
-Cookie Stuff
-****************************/
-
-
-abstract sig Token {}
+open basicDeclarations
+open HTTPHdrDecls
 
 sig Cookie extends Secret {
 	name : Token,
@@ -26,6 +12,19 @@ sig SecureCookie extends Cookie {}
 
 sig CookieHeader extends HTTPRequestHeader{ thecookie : Cookie }
 sig SetCookieHeader extends HTTPResponseHeader{	thecookie : Cookie }
+
+
+
+/* Enforce a common semantic between the
+    to, from, and host of HTTP Requests and HTTP Responses */
+
+
+
+
+/****************************
+Cookie Stuff
+****************************/
+
 
 fact SecureCookiesOnlySentOverHTTPS{
 		all e:HTTPEvent,c:SecureCookie | {
@@ -55,8 +54,8 @@ pred httpPacketHasCookie[c:Cookie,httpevent:HTTPRequest+HTTPResponse]{
 				(httpevent in HTTPResponse and c in (httpevent.headers & SetCookieHeader).thecookie)
 }
 
-pred hasKnowledgeViaUnencryptedHTTPEvent[c: Cookie, ne : NetworkEndpoint, usageEvent: Event]{ 
-		ne !in WebPrincipal.servers + Browser //Question: should there be a line that relates ne to httpevent?
+pred hasKnowledgeViaUnencryptedHTTPEvent[c: Cookie, ne : NetworkEndpoint, usageEvent: Event]{
+		ne !in WebPrincipal.servers + Browser
 		some httpevent : HTTPEvent | {
 			happensBeforeOrdering[httpevent,usageEvent]
 			httpevent.host.schema = HTTP
@@ -102,3 +101,5 @@ fact NormalPrincipalsDontReuseCookies{
 			some ( 	(e1.headers & SetCookieHeader).thecookie & (e2.headers & SetCookieHeader).thecookie )
 	}
 }
+
+

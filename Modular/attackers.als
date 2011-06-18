@@ -1,8 +1,9 @@
 open DNSAndOrigin
-open SOPDeclarations
+//open SOPDeclarations
 open iframe
 open CSP
-open SOPAndNetworkConnector
+open SOPAndNetworkConnector as s
+
 
 
 //--------------------------------- XSS ATTACKER--------------------------/
@@ -53,10 +54,10 @@ check ActiveAttackerCannotAccessHTTPSDOM{
 	} implies
 	//------- Attacker ------/
 	no frm:Frame | {
-		HTTPS = frm.dom.effectiveOrigin.Schema //the document is served with HTTPS
+		HTTPS = frm.dom.effectiveOrigin.schema //the document is served with HTTPS
 		frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabel // if the document belongs to a good principal
 	
-		some script:Script |{
+		some script:scriptDOM |{
 			script in frm.scripts
 			script.embeddedOrigin.dnslabel in ACTIVEATTACKER
 		}
