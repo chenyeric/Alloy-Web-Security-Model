@@ -43,8 +43,11 @@ fact HTTPSIsLinkedWithCertificate{
 			some Certificate in fn.context.transactions.cert
 		}
 	}
-
 }
+
+// need a one to one mapping between a cert and a dom object
+
+
 
 run {some p:FrameOnNetwork|some p} 
 for 6
