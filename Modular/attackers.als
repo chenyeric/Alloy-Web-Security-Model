@@ -42,7 +42,7 @@ check XSSAttackCannotHappenInBeep{
 }for 4
 */
 //------------------------------Active Attacker -----------------------------/
-
+/*
 fact UserWillNotClickThroughSecurityWarning{
 	//-------User model: Assume the user will NOT click through warnings-----/
 	all cert1,cert2:Certificate, fn:FrameOnNetwork|{
@@ -53,9 +53,23 @@ fact UserWillNotClickThroughSecurityWarning{
 	}
 
 }
+*/
+
+//Locked SOP
+fact LockedSOP{
+
+	//if 2 doms has 2 different certs, then they can't be the same origin
+	all dom1, dom2:documentDOM|{
+		{
+			GOODCA= dom1.transaction.cert.ca
+			BADCA = dom2.transaction.cert.ca
+		}implies 
+			dom1.effectiveOrigin != dom2.effectiveOrigin
+	}
+}
 
 //a document is vulnerable to active attackers if:
-//1) A script that is served by an Attacker's PRINCIPAL is inside the victim's dom
+//1) A script that is served by an Attacker's PRINCIPAL can access the victim's dom
 check ActiveAttackerCannotAccessHTTPSDOM{
 
 	no frm:Frame|{
@@ -64,7 +78,9 @@ check ActiveAttackerCannotAccessHTTPSDOM{
 			frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabels // if the document belongs to a good principal
 			GOODCA = frm.dom.transaction.cert.ca
 
-			some script:frm.scripts|{ 
+			//the attacker "Can" access it
+			some dummy_frame:Frame, script:dummy_frame.scripts|{
+				frm in dummy_frame.canAccess 
 				HTTPS = script.srcOrigin.schema
 				//script.srcOrigin.dnslabel in ACTIVEATTACKER.dnslabels 
 				BADCA = script.transaction.cert.ca
