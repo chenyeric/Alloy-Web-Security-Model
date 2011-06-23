@@ -1,13 +1,13 @@
 open DNSAndOrigin
 //open SOPDeclarations
 open iframe
-open CSP
-open SOPAndNetworkConnector as s
+//open CSP
+open SOPAndNetworkConnector 
 
 
 
 //--------------------------------- XSS ATTACKER--------------------------/
-
+/*
 fact BEEP{
 	all frm:Frame,script:scriptDOM|{
 		{
@@ -40,29 +40,37 @@ check XSSAttackCannotHappenInBeep{
 		(SANITIZED not in script.attribute) or (INLINE in script.attribute)
 	}
 }for 4
-
+*/
 //------------------------------Active Attacker -----------------------------/
+
+fact UserWillNotClickThroughSecurityWarning{
+	//-------User model: Assume the user will NOT click through warnings-----/
+	all cert1,cert2:Certificate, fn:FrameOnNetwork|{
+		{
+			BADCA = cert1.ca
+			GOODCA = cert2.ca 
+		} implies (cert1+cert2) not in fn.context.transactions.cert
+	}
+
+}
 
 //a document is vulnerable to active attackers if:
 //1) A script that is served by an Attacker's PRINCIPAL is inside the victim's dom
 check ActiveAttackerCannotAccessHTTPSDOM{
-	//-------User model: Assume the user will NOT click through warnings-----/
-	no cert1,cert2:Certificate, fn:FrameOnNetwork|{
-		BADCA = cert1.ca
-		GOODCA = cert2.ca 
-		(cert1+cert2) in fn.context.transactions.cert
-	} implies
-	//------- Attacker ------/
-	no frm:Frame | {
-		HTTPS = frm.dom.effectiveOrigin.schema //the document is served with HTTPS
-		frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabels // if the document belongs to a good principal
-	
-		some script:scriptDOM |{
-			script in frm.scripts
-			script.srcOrigin.dnslabel in ACTIVEATTACKER.dnslabels
-		}
 
+	no frm:Frame|{
+			//------- Attacker ------/
+			HTTPS = frm.dom.effectiveOrigin.schema //the document is served with HTTPS
+			frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabels // if the document belongs to a good principal
+			GOODCA = frm.dom.transaction.cert.ca
+
+			some script:frm.scripts|{ 
+				HTTPS = script.srcOrigin.schema
+				//script.srcOrigin.dnslabel in ACTIVEATTACKER.dnslabels 
+				BADCA = script.transaction.cert.ca
+			}
 	}
+	
 }for 4
 
 

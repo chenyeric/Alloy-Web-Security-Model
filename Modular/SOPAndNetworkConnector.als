@@ -41,8 +41,15 @@ fact AllTransactionsAreSane{
 		//TODO: add more resources here
 		(fn.dom.transaction+fn.scripts.transaction)=fn.context.transactions
 	}
-
 }
+
+check TransactionsAreSane{
+	all tx:HTTPTransaction, fn:FrameOnNetwork{
+		(tx = fn.dom.transaction) or (tx in fn.scripts.transaction) iff {
+			tx in fn.context.transactions
+		}
+	}
+}for 4
 
 //----------------SSL ------------/
 fact HTTPSIsLinkedWithCertificate{
