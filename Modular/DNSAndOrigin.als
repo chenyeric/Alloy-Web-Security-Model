@@ -1,3 +1,5 @@
+
+
 sig DNS{
 	parent : DNS + DNSRoot,
 	resolvesTo : set NetworkEndpoint

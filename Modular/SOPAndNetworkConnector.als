@@ -35,27 +35,47 @@ fact BrowserSOPEnforcerRelation {
    }
 }
 
+//transactions initiated by a frame should equal to all transactions caused by the resources in that frame
+fact AllTransactionsAreSane{
+	all fn:FrameOnNetwork|{
+		//TODO: add more resources here
+		(fn.dom.transaction+fn.scripts.transaction)=fn.context.transactions
+	}
+
+}
+
 //----------------SSL ------------/
 fact HTTPSIsLinkedWithCertificate{
 
-	all fn:FrameOnNetwork|{
-		HTTPS = fn.dom.effectiveOrigin.schema implies {
-			some fn.context.transactions.cert
+	all dom:documentDOM|{
+		HTTPS = dom.effectiveOrigin.schema iff { 
+			some dom.transaction.cert
 		}
 	}
+
+	all script:scriptDOM|{
+		HTTPS = script.srcOrigin.schema iff {
+			some script.transaction.cert
+		}
+	}
+
+	//TODO: include other objects in the future
+	
 }
+// compromised SSL session implies BADCA
+fact CompromisedSSLImpliesBadCA{
+	all script:scriptDOM, fn:FrameOnNetwork|{
+		{
+			script in fn.scripts
+			fn.dom.effectiveOrigin.dnslabel in GOOD.dnslabels  // if the dom of this element is not compromised (doesn't make sense if it is)
+			script.srcOrigin.dnslabel in ACTIVEATTACKER.dnslabels //but if a script is under DNS rebinding attack
+		}implies{  //then there must be an active attacker
+			BADCA = script.transaction.cert.ca //that changed the cert of the script
 
-//active attackers control BADCAs
-fact ActiveAttackerControlsBadCA{
-	all fn:FrameOnNetwork|{
-
-
+		}
 	}
 
 }
-
-// need a one to one mapping between a cert and a dom object
-
 
 
 run {some p:FrameOnNetwork|some p} 

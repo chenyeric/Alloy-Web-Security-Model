@@ -1,5 +1,6 @@
 
 open DNSAndOrigin
+open basicDeclarations
 
 abstract sig SOPObject {
    enforcer : one SOPEnforcer,   //Which Browser is doing the enforcement? Need a place for variations

@@ -59,7 +59,7 @@ check ActiveAttackerCannotAccessHTTPSDOM{
 	
 		some script:scriptDOM |{
 			script in frm.scripts
-			script.embeddedOrigin.dnslabel in ACTIVEATTACKER.dnslabels
+			script.srcOrigin.dnslabel in ACTIVEATTACKER.dnslabels
 		}
 
 	}
