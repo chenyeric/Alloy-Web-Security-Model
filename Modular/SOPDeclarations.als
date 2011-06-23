@@ -85,6 +85,7 @@ sig scriptDOM {
 	embeddedOrigin: one Origin, // the origin that embedded this script
 	attribute: set scriptAttribute,
     mimeType:  one MIMEType,
+	transaction: one HTTPTransaction
 }{
 	INLINE in attribute implies srcOrigin = embeddedOrigin //only way for inline scripts to happen
 }
@@ -103,7 +104,8 @@ fact scriptDocumentRelation {
 
 sig documentDOM {
    defaultOrigin : one Origin ,
-   effectiveOrigin : lone Origin  // the effective origin is from document.domain, which can also be unused.
+   effectiveOrigin : lone Origin,  // the effective origin is from document.domain, which can also be unused.
+	transaction: one HTTPTransaction
 }
 {
   //model the shortening of document.domain

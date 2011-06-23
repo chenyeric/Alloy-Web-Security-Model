@@ -45,6 +45,15 @@ fact HTTPSIsLinkedWithCertificate{
 	}
 }
 
+//active attackers control BADCAs
+fact ActiveAttackerControlsBadCA{
+	all fn:FrameOnNetwork|{
+
+
+	}
+
+}
+
 // need a one to one mapping between a cert and a dom object
 
 
