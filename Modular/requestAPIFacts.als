@@ -1,5 +1,5 @@
-open requestAPI
-open cors
+open basicDeclarations
+//open cors
 
 fact FormOnlyDoesPostOrGet {
 	all t:BrowsingContext.transactions | t.cause in FormElement implies t.req.method in GET + POST + PUT+ DELETE
@@ -19,6 +19,7 @@ fact XHRNoCrossOriginRequestOrRedirect{
 		t.^cause in (XMLHTTPRequest+HTTPTransaction) implies not isCrossOriginRequest[t.req]
 }
 
+/*
 fact XHR2_CrossOrigin {
 	all t:BrowsingContext.transactions | 
 		t.^cause in (XMLHTTPRequest2+HTTPTransaction) implies { 
@@ -78,6 +79,7 @@ fact XDRRedirect {
 			}
 	}
 }
+*/
 
 // What about how the server opts into letting XDR tell the script context about the value of the response?
 
