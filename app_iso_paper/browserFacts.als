@@ -1,4 +1,4 @@
-open declarations
+open declarations_cookie_update
 
 // This isn't quite right.  We might need a concept of a "pure" client that isn't also a server.
 fact ClientsOnlyRequest {

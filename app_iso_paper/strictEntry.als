@@ -1,4 +1,4 @@
-open declarations
+open declarations_cookie_update as d
 open browserFacts
 open requestAPIFacts
 /*****************************************************
