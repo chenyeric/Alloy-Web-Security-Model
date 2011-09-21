@@ -68,12 +68,27 @@ fact LockedSOP{
 	}
 }
 
+run LSOPBugTest{
+	some frm:Frame|{
+		HTTPS = frm.dom.effectiveOrigin.schema //the document is served with HTTPS
+		frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabels // if the document belongs to a good principal
+		GOODCA = frm.dom.transaction.cert.ca
+		
+		some script:frm.scripts|{
+				HTTPS = script.srcOrigin.schema
+				//script.srcOrigin.dnslabel in ACTIVEATTACKER.dnslabels 
+				BADCA = script.transaction.cert.ca
+			}
+	}
+
+}
+
 //a document is vulnerable to active attackers if:
 //1) A script that is served by an Attacker's PRINCIPAL can access the victim's dom
 check ActiveAttackerCannotAccessHTTPSDOM{
 
 	no frm:Frame|{
-			//------- Attacker ------/
+			//------- victim ------/
 			HTTPS = frm.dom.effectiveOrigin.schema //the document is served with HTTPS
 			frm.dom.effectiveOrigin.dnslabel in GOOD.dnslabels // if the document belongs to a good principal
 			GOODCA = frm.dom.transaction.cert.ca
@@ -87,7 +102,7 @@ check ActiveAttackerCannotAccessHTTPSDOM{
 			}
 	}
 	
-}for 4
+}for 6
 
 
 
