@@ -1,12 +1,12 @@
-open basicDeclarations
+open requestAPI
 //open cors
 
 fact FormOnlyDoesPostOrGet {
-	all t:BrowsingContext.transactions | t.cause in FormElement implies t.req.method in GET + POST + PUT+ DELETE
+	all t:ScriptContext.transactions | t.cause in FormElement implies t.req.method in GET + POST + PUT+ DELETE
 }
 
 fact {
-	all t:BrowsingContext.transactions | t.cause in FormElement  and t.req.method in PUT+DELETE implies {
+	all t:ScriptContext.transactions | t.cause in FormElement  and t.req.method in PUT+DELETE implies {
 			not ( isCrossOriginRequest[t.req] )
 			no t.(~cause)
 	}
@@ -15,13 +15,12 @@ fact {
 
 
 fact XHRNoCrossOriginRequestOrRedirect{
-	all t:BrowsingContext.transactions |
+	all t:ScriptContext.transactions |
 		t.^cause in (XMLHTTPRequest+HTTPTransaction) implies not isCrossOriginRequest[t.req]
 }
-
 /*
 fact XHR2_CrossOrigin {
-	all t:BrowsingContext.transactions | 
+	all t:ScriptContext.transactions | 
 		t.^cause in (XMLHTTPRequest2+HTTPTransaction) implies { 
 						CORSPreFlightRequestTransaction[t] 
 						or simpleCORSTransaction[t] 
@@ -43,10 +42,11 @@ pred CORSPreFlightRequestTransaction[t:HTTPTransaction]{
 	//no redirects for CORSPreflight
 	t.resp.statusCode in c301+c302+c303+c307 implies no t.(~cause)
 }
-
+*/
 
 
 //Remove all preflight request requirement in this .. add that to servers, that they make such type response only for a preflightRequest
+/*
 pred complexCORSTransaction[t:HTTPTransaction]{
 	t.req !in PreFlightRequest
 	isCrossOriginRequest[t.req]
@@ -60,7 +60,9 @@ pred complexCORSTransaction[t:HTTPTransaction]{
 	}
 	t.resp.statusCode in c301+c302+c303+c307 implies no t.(~cause)
 }
+*/
 
+/*
 fact XDROnlyDoesPostOrGet {
 	all t:HTTPTransaction | t.cause in XDomainRequest implies {
 			t.req.method in GET + POST
@@ -80,7 +82,6 @@ fact XDRRedirect {
 	}
 }
 */
-
 // What about how the server opts into letting XDR tell the script context about the value of the response?
 
 run show {} for 6
