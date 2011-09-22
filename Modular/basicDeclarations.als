@@ -160,8 +160,20 @@ fact ProcessContextRelation {
 }
 /**********************************/
 
+/************************************
+* RequestAPI
+*
+************************************/
+
+
+
+lone sig FormElement extends RequestAPI {}
+sig XMLHTTPRequest extends RequestAPI {	headers: set HTTPRequestHeader}
+
 abstract sig RequestAPI // extends Event 
 {} 
+
+
 
 // Browsers run a BrowsingContext -- now trying to integrate this with the SOP stuff.
 sig BrowsingContext { 

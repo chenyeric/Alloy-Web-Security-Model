@@ -87,7 +87,7 @@ check ActiveAttackerCannotAccessHTTPSDOM{
 			}
 	}
 	
-}for 4
+} for 6
 
 
 
