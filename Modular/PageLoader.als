@@ -11,6 +11,7 @@ sig BrowsingContext {
 	window: set WindowProxy, //the unique window object that scripts can access
 	sessionHistory: one History, //the history object of this browsing context
     opener: lone BrowsingContext, //opener page
+	opened: set BrowsingContext, // all the browsing contexts that was opened
 	creator: lone BrowserContext,
 
 	isTop: one Bool, //is this the top browsing context?
@@ -31,6 +32,9 @@ sig BrowsingContext {
 
 	//navigation
 	canNavigate: set BrowsingContext,
+
+	//grouping browsing context
+	directlyReachable: set BrowsingContext,
 }{
 
  /*In general, there is a 1-to-1 mapping from the Window object 
@@ -58,6 +62,12 @@ fact browsingContext_onlyOneCreator{
 fact browsingContext_parentChildRelationship{
 	all cctx,pctx:BrowsingContext|{
 		pctx = cctx.parent iff cctx in pctx.children
+	}
+}
+
+fact browsingContext_openerRelationship{
+	all cctx,pctx:BrowsingContext|{
+		pctx = cctx.opener iff cctx in pctx.opened
 	}
 }
 
@@ -133,6 +143,74 @@ fact browsingContext_Navigation{
 	}
 }
 
+/*
+Directly reachable browsing contexts are:
+1)The browsing context itself.
+2)All the browsing context's child browsing contexts.
+3)The browsing context's parent browsing context.
+4)All the browsing contexts that have the browsing context as their opener browsing context.
+5)The browsing context's opener browsing context.
+*/
+fact browsingContext_directlyReachable{
+	all ctx:BrowsingContext|{
+		ctx.directlyReachable = (ctx + ctx.children + ctx.creator + ctx.opened)
+	}
+}
+
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 5.1.5 Groupings of browsing contexts XXXXXXXXXXXXXXXXXXXXXXXXXXX
+sig UnitOfRelatedBrowsingContext{
+	browsingContexts: set BrowsingContext,
+	unitOfsimilarOrigin: set UnitOfRelatedSimilarOriginBrowsingContext,
+}
+
+sig UnitedOfRelatedSimilarOriginBrowsingContext{
+	origin: one effectiveScriptOrigin,
+	browsingContexts: set BrowsingContext,
+}
+
+//The transitive closure of all the browsing contexts that are directly reachable browsing contexts 
+//forms a unit of related browsing contexts.
+fact unitOfRelatedBrowsingContext_definition{
+	all unitctx:UnitOfRelatedBrowsingContext|{
+		disj unitctx.browsingContext
+		all ctxA, ctxB:BrowsingContext|{
+			(ctxA + ctxB) in unitctx.browsingContext iff  (ctxA in ctxB.*directlyReachable)
+		}
+	}
+}
+
+//through appropriate manipulation of the document.domain attribute, could be made to 
+//be the same as other members of the group, but could not be made the same as members of 
+//any other group
+fact unitOfRelatedSimilarOriginBrowsingContext_definition{
+	some unitctx: UnitofRelatedSimilarOriginBrowsingContext|{
+		all ctxa, ctxb:BrowsingContext{
+			{
+				isSubdomainOf[ctxa.activeDocument.origin.dnslabel, ctxb.activeDocument.origin.dnslabel] or
+				isSubdomainOf[ctxb.activeDocument.origin.dnslabel, ctxa.activeDocument.origin.dnslabel] or
+				isSiblingDomainOf[ctxa.activeDocument.origin.dnslabel, ctxb.activeDocument.origin.dnslabel]
+			} iff (ctxa+ctxb) in unitctx.browsingContexts
+		}
+	}
+}
+
+fact OneUnitOfRelatedSimilarOriginBrowsingContextPerOrigin{
+	no unitctxa, unitctxb: UnitofRelatedSimilarOriginBrowsingContext|{
+		some ctx: BrowsingContext{
+			ctx in unitctxa.browsingContext and ctx in unitctxb.browsingContext
+		}	
+	}
+}
+
+fact originOfSimilarBrowsingContext{
+	all ctx:BrowsingContext|{
+		some unitctx: UnitofRelatedSimilarOriginBrowsingContext|{
+			(ctx.activeDocument.origin.dnslabel.parent in DNSRoot and//top level DNS origin
+				ctx in unitctx.browsingContext) iff ctx.activeDocument.origin = unitctx.origin
+		}
+	}
+}
+
 sig Document {
 
 	browsingContext: one BrowsingContext, // which BC this document belongs to
@@ -176,7 +254,9 @@ sig Element{} //html element
 Document in their parent browsing context. User agents must not allow the user to interact with child browsing contexts
  of elements that are in Documents that are not themselves fully active.*/
 
-//5.1.5 Groupings of browsing contexts
+
+//5.1.6 Browsing context names
+
 
 
 
