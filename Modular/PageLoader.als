@@ -3,6 +3,7 @@ open DNSAndOrigin
 open basicDeclarations
 
 enum Bool { TRUE, FALSE} //hack to get boolean
+sig String{} //used in things like browsing context name
 
 sig WindowProxy{} //the window object
 sig History{} //history object
@@ -12,7 +13,9 @@ sig BrowsingContext {
 	sessionHistory: one History, //the history object of this browsing context
     opener: lone BrowsingContext, //opener page
 	opened: set BrowsingContext, // all the browsing contexts that was opened
-	creator: lone BrowserContext,
+	creator: lone BrowsingContext,
+
+	name: lone String, //name of the browsing context
 
 	isTop: one Bool, //is this the top browsing context?
 	isFullyActive: one Bool, //is this browsing context fully active?
@@ -54,8 +57,8 @@ data mining tools are likely to never instantiate browsing contexts.
 fact browsingContext_onlyOneCreator{
 	all ctx:BrowsingContext|{
 		//every browsing context can only have 1 creator
-		some ctx.parent implies (no ctx.opener and ctx.parent = creator)
-		some ctx.opener implies (no ctx.parent and ctx.opener = creator)
+		some ctx.parent implies (no ctx.opener and ctx.parent = ctx.creator)
+		some ctx.opener implies (no ctx.parent and ctx.opener = ctx.creator)
 	}
 }
 
@@ -73,12 +76,16 @@ fact browsingContext_openerRelationship{
 
 //top browsing context
 fact browsingContext_topBrowsingContext{
-	all cxt:BrowsingContext|{
+	all ctx:BrowsingContext|{
 		ctx.isTop = TRUE iff(
 			no ctx.parent
 		)
 	}
 }
+
+//TODO: name cannot start off with '_'
+//fact browsingContext_name{}
+
 
 //document / BC relationship
 fact documentAndBrowsingContext{
@@ -90,24 +97,26 @@ fact documentAndBrowsingContext{
 
 //describes the relationship between directly nested browsing contexts
 fact nestedBrowsingContext{
-	all disj pctx,cctx:BrowsingContext| {
-		some doc in pctx.Documents =>(
-			some ele in doc.elements =>(
-				ele.nestedContext = cctx iff{
+	all disj pctx,cctx:BrowsingContext|{
+		some doc:Document |{
+			some ele:Element |{
+				(doc in pctx.documents and
+				 ele in doc.elements and
+				 ele.nestedContext = cctx) iff{
 					cctx.parentDocument = doc and
 					cctx.contextContainer = ele and
 					no cctx.opener
 					// cctx doesn't neccessarily has to be pctx's parent, (i.e., if an iframe is removed from the document)
 				}
 			}
-		)
+		}
 	}
 }
 
 //ancestor browsing contexts
 fact ancestorBrowsingContext{
-	all disj ctx1, ctx2|{
-		ctx1 = ctx2.*parent iff ctx1 in ctx2.ancestor
+	all disj ctx1, ctx2:BrowsingContext|{
+		ctx1 = ctx2.*parent iff ctx1 in ctx2.ancestors
 	}
 }
 
@@ -115,7 +124,7 @@ fact ancestorBrowsingContext{
 fact browsingContext_fullyActiveBrowsingContext{
 		all ctx:BrowsingContext|{
 			ctx.isFullyActive = TRUE iff(
-				ctx.istop = TRUE or
+				ctx.isTop = TRUE or
 				ctx.parentDocument.browsingContext.isFullyActive = TRUE //does recursion work in alloy?
 			)
 		}
@@ -135,7 +144,8 @@ fact browsingContext_Navigation{
 			ctxA.activeDocument.origin = ctxB.activeDocument.origin or // 1)
 			(ctxA in ctxB.children and ctxB.isTop = TRUE) or //2
 			(some ctxB.opener and ctxB.opener in ctxA.canNavigate) or //3
-			some ctxC in ctxB.ancestors|{ //4
+			some ctxC:BrowsingContext |{ //4
+				ctxC in ctxB.ancestors
 				ctxB.isTop = FALSE  
 				ctxC.activeDocument.origin = ctxA.activeDocument.origin
 			}
@@ -163,8 +173,8 @@ sig UnitOfRelatedBrowsingContext{
 	unitOfsimilarOrigin: set UnitOfRelatedSimilarOriginBrowsingContext,
 }
 
-sig UnitedOfRelatedSimilarOriginBrowsingContext{
-	origin: one effectiveScriptOrigin,
+sig UnitOfRelatedSimilarOriginBrowsingContext{
+	origin: one Origin,
 	browsingContexts: set BrowsingContext,
 }
 
@@ -172,9 +182,17 @@ sig UnitedOfRelatedSimilarOriginBrowsingContext{
 //forms a unit of related browsing contexts.
 fact unitOfRelatedBrowsingContext_definition{
 	all unitctx:UnitOfRelatedBrowsingContext|{
-		disj unitctx.browsingContext
 		all ctxA, ctxB:BrowsingContext|{
-			(ctxA + ctxB) in unitctx.browsingContext iff  (ctxA in ctxB.*directlyReachable)
+			(ctxA + ctxB) in unitctx.browsingContexts iff  (ctxA in ctxB.*directlyReachable)
+		}
+	}
+}
+
+fact unitOfRelatedBrowsingContext_no_duplication{
+	no disj unitctxa, unitctxb:UnitOfRelatedBrowsingContext|{
+		some ctx:BrowsingContext|{
+			ctx in unitctxa.browsingContexts
+			ctx in unitctxb.browsingContexts
 		}
 	}
 }
@@ -183,7 +201,7 @@ fact unitOfRelatedBrowsingContext_definition{
 //be the same as other members of the group, but could not be made the same as members of 
 //any other group
 fact unitOfRelatedSimilarOriginBrowsingContext_definition{
-	some unitctx: UnitofRelatedSimilarOriginBrowsingContext|{
+	some unitctx: UnitOfRelatedSimilarOriginBrowsingContext|{
 		all ctxa, ctxb:BrowsingContext{
 			{
 				isSubdomainOf[ctxa.activeDocument.origin.dnslabel, ctxb.activeDocument.origin.dnslabel] or
@@ -194,19 +212,28 @@ fact unitOfRelatedSimilarOriginBrowsingContext_definition{
 	}
 }
 
+run unitOfRelatedSimilarOriginBrowsingContext_areSane{
+	some ctxa,ctxb:BrowsingContext|{
+		some unitctx:UnitOfRelatedSimilarOriginBrowsingContext|{
+			(ctxa+ctxb) in unitctx.browsingContexts
+			ctxa.activeDocument.origin != ctxb.activeDocument.origin
+		}
+	}
+} for 5
+
 fact OneUnitOfRelatedSimilarOriginBrowsingContextPerOrigin{
-	no unitctxa, unitctxb: UnitofRelatedSimilarOriginBrowsingContext|{
+	no unitctxa, unitctxb: UnitOfRelatedSimilarOriginBrowsingContext|{
 		some ctx: BrowsingContext{
-			ctx in unitctxa.browsingContext and ctx in unitctxb.browsingContext
+			ctx in unitctxa.browsingContexts and ctx in unitctxb.browsingContexts
 		}	
 	}
 }
 
 fact originOfSimilarBrowsingContext{
 	all ctx:BrowsingContext|{
-		some unitctx: UnitofRelatedSimilarOriginBrowsingContext|{
+		some unitctx: UnitOfRelatedSimilarOriginBrowsingContext|{
 			(ctx.activeDocument.origin.dnslabel.parent in DNSRoot and//top level DNS origin
-				ctx in unitctx.browsingContext) iff ctx.activeDocument.origin = unitctx.origin
+				ctx in unitctx.browsingContexts) iff ctx.activeDocument.origin = unitctx.origin
 		}
 	}
 }
@@ -215,24 +242,26 @@ sig Document {
 
 	browsingContext: one BrowsingContext, // which BC this document belongs to
 
-	charset: one CharacterEncoding,
+	charset: one CHARACTEREncoding,
 	type: one MIMEType,
 	url: one URLType,
 	origin: one Origin,
 	effectiveScriptOrigin: lone Origin,	
 
 	html: HTMLElement,
-	elements: set Elements,
+	elements: set Element,
 }
 
 //The origin of about_blank
+/*
 fact originOfAboutBlank{
 	all doc: Document|{
 		//doc.url = ABOUT_BLANK implies 
 
 	}
-}
+}*/
 
+enum CHARACTEREncoding{UTF8}
 enum URLType{NORM, ABOUT_BLANK, DATA}
 enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 
@@ -245,17 +274,18 @@ sig HEADElement extends Element{}
 sig BODYElement extends Element{}
 //iframe can nest other browsing contexts
 sig IframeElement extends Element{
-	nestedContext: BrowserContext,
+	nestedContext: BrowsingContext,
 }
 sig Element{} //html element
 
 
-/*TODO: Because they are nested through an element, child browsing contexts are always tied to a specific 
-Document in their parent browsing context. User agents must not allow the user to interact with child browsing contexts
- of elements that are in Documents that are not themselves fully active.*/
+/*TODO: Because they are nested through an element, child browsing contexts are always tied to a 
+specific  Document in their parent browsing context. User agents must not allow the user to interact 
+with child browsing contexts of elements that are in Documents that are not themselves fully active.*/
 
 
 //5.1.6 Browsing context names
+
 
 
 
