@@ -119,14 +119,16 @@ abstract sig HTTPClient extends HTTPConformist{
 }
 sig Browser extends HTTPClient {
 	trustedCA : set certificateAuthority,
-    engines: set RenderingEngine
+    //engines: set RenderingEngine
 }
 
 //this ensures each engine only in 1 browser
+/*
 fact RenderingEngineRelation {
   all b:Browser, p:RenderingEngine |
       p in b.engines iff p.inBrowser = b
 }
+*/
 
 abstract sig InternetExplorer extends Browser{}
 sig InternetExplorer6 extends InternetExplorer{}
@@ -141,23 +143,25 @@ sig Chrome extends Browser{}
 sig Android extends Browser{}
 sig Opera extends Browser{}
 
-/* JHB 2-3-11 Browser RenderingEngines */
+/*
+// JHB 2-3-11 Browser RenderingEngines 
 sig RenderingEngine { 
    contexts: set BrowsingContext,
    inBrowser : one Browser //each engine has a browser
 } {
   contexts.@location = inBrowser
 }
-
-sig AppRenderingEngine extends RenderingEngine{}
+*/
+//sig AppRenderingEngine extends RenderingEngine{}
 //sig RegRenderingEngine extends RenderingEngine{}
 
 //this ensures each context only in 1 process
 //also each context has a process
+/*
 fact ProcessContextRelation {
   all c:BrowsingContext, p: RenderingEngine |
        c in p.contexts iff c.engine = p
-}
+}*/
 /**********************************/
 
 /************************************
@@ -176,6 +180,7 @@ abstract sig RequestAPI // extends Event
 
 
 // Browsers run a BrowsingContext -- now trying to integrate this with the SOP stuff.
+/*
 sig BrowsingContext { 
 	owner : Origin,
 	location : Browser,
@@ -185,7 +190,7 @@ sig BrowsingContext {
 // Browsers are honest, they set the from correctly
 	transactions.req.from = location
 }
-
+*/
 
 sig HTTPTransaction {
 	req : HTTPRequest,
@@ -217,19 +222,22 @@ fun getTrans[e:HTTPEvent]:HTTPTransaction{
 	(req+resp).e
 }
 
+/*
 fun getBrowsingContext[t:HTTPTransaction]:BrowsingContext {
 		transactions.t
-}
+}*/
 
+/*
 fun getContextOf[request:HTTPRequest]:Origin {
 	(transactions.(req.request)).owner
 }
-
+*/
+/*
 pred isCrossOriginRequest[request:HTTPRequest]{
 		getContextOf[request].schema != request.host.schema or
 		getContextOf[request].dnslabel != request.host.dnslabel
 }
-
+*/
 
 
 
@@ -292,12 +300,12 @@ HTTP Facts
 
 ************************/
 
-
+/*
 fact scriptContextsAreSane {
 	all disj sc,sc':BrowsingContext | no (sc.transactions & sc'.transactions)
 	all t:HTTPTransaction | t.req.from in Browser implies t in BrowsingContext.transactions
 }
-
+*/
 
 fact HTTPTransactionsAreSane {
 	all disj t,t':HTTPTransaction | no (t.resp & t'.resp ) and no (t.req & t'.req)
@@ -493,7 +501,7 @@ pred somePasswordExists {
 
 run somePasswordExists for 8
 
-
+/*
 
 pred basicModelIsConsistent {
   some BrowsingContext
@@ -503,7 +511,7 @@ pred basicModelIsConsistent {
   }
 }
 run basicModelIsConsistent  for 8 but 3 HTTPResponse//, 3 HTTPRequest, 
-
+*/
 
 /* 
 run basicModelIsConsistent  for 8 but 3 HTTPResponse//, 3 HTTPRequest, 
