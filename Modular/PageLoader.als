@@ -1,6 +1,7 @@
 
 open DNSAndOrigin
 open basicDeclarations
+open HTMLElements
 
 enum Bool { TRUE, FALSE} //hack to get boolean
 sig String{} //used in things like browsing context name
@@ -29,6 +30,7 @@ sig BrowsingContext {
 	contextContainer: lone Element,
 	parent: lone BrowsingContext,
 	ancestors: set BrowsingContext,
+	top: one BrowsingContext,
 
 	//for nesting browsing contexts
 	children: set BrowsingContext,
@@ -53,12 +55,49 @@ data mining tools are likely to never instantiate browsing contexts.
 */
 }
 
+
+sig Document {
+
+	browsingContext: one BrowsingContext, // which BC this document belongs to
+
+	charset: one CHARACTEREncoding,
+	type: one MIMEType,
+	url: one URLType,
+	origin: one Origin,
+	effectiveScriptOrigin: lone Origin,	
+
+	html: HTMLElement,
+	elements: set Element,
+}
+
+//The origin of about_blank
+/*
+fact originOfAboutBlank{
+	all doc: Document|{
+		//doc.url = ABOUT_BLANK implies 
+
+	}
+}*/
+
+enum CHARACTEREncoding{UTF8}
+enum URLType{NORM, ABOUT_BLANK, DATA}
+enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
+
+
+
 //you can either have a parent context or an opener context, but not both
 fact browsingContext_onlyOneCreator{
 	all ctx:BrowsingContext|{
 		//every browsing context can only have 1 creator
 		some ctx.parent implies (no ctx.opener and ctx.parent = ctx.creator)
 		some ctx.opener implies (no ctx.parent and ctx.opener = ctx.creator)
+	}
+}
+
+//no loops
+fact browsingContext_noLoopContext{
+	all ctx:BrowsingContext|{
+		ctx not in ctx.ancestors
 	}
 }
 
@@ -83,6 +122,15 @@ fact browsingContext_topBrowsingContext{
 	}
 }
 
+fact browsingContext_linkTopWithChild{
+	all ctxa,ctxb:BrowsingContext|{
+		{
+			ctxa.isTop = TRUE
+			ctxb in ctxa.children
+		} implies ctxa = ctxb.top
+	}
+}
+
 //TODO: name cannot start off with '_'
 //fact browsingContext_name{}
 
@@ -97,16 +145,16 @@ fact documentAndBrowsingContext{
 
 //describes the relationship between directly nested browsing contexts
 fact nestedBrowsingContext{
-	all disj pctx,cctx:BrowsingContext|{
+	all disj pctx,cctx:BrowsingContext|{ // for context A and B
 		some doc:Document |{
 			some ele:Element |{
-				(doc in pctx.documents and
-				 ele in doc.elements and
-				 ele.nestedContext = cctx) iff{
-					cctx.parentDocument = doc and
-					cctx.contextContainer = ele and
+				(doc in pctx.documents and //if doc is in A
+				 ele in doc.elements and      // if (iframe) element is in doc
+				 ele.nestedContext = cctx) iff{ // this (iframe) element contains  B if and only if
+					cctx.parentDocument = doc and // B's parent document is doc
+					cctx.contextContainer = ele and // B's context container is the (iframe) element
 					no cctx.opener
-					// cctx doesn't neccessarily has to be pctx's parent, (i.e., if an iframe is removed from the document)
+					// pctx doesn't neccessarily have to be cctx's parent, (i.e., if an iframe is removed from the document)
 				}
 			}
 		}
@@ -212,15 +260,6 @@ fact unitOfRelatedSimilarOriginBrowsingContext_definition{
 	}
 }
 
-run unitOfRelatedSimilarOriginBrowsingContext_areSane{
-	some ctxa,ctxb:BrowsingContext|{
-		some unitctx:UnitOfRelatedSimilarOriginBrowsingContext|{
-			(ctxa+ctxb) in unitctx.browsingContexts
-			ctxa.activeDocument.origin != ctxb.activeDocument.origin
-		}
-	}
-} for 5
-
 fact OneUnitOfRelatedSimilarOriginBrowsingContextPerOrigin{
 	no unitctxa, unitctxb: UnitOfRelatedSimilarOriginBrowsingContext|{
 		some ctx: BrowsingContext{
@@ -238,54 +277,30 @@ fact originOfSimilarBrowsingContext{
 	}
 }
 
-sig Document {
-
-	browsingContext: one BrowsingContext, // which BC this document belongs to
-
-	charset: one CHARACTEREncoding,
-	type: one MIMEType,
-	url: one URLType,
-	origin: one Origin,
-	effectiveScriptOrigin: lone Origin,	
-
-	html: HTMLElement,
-	elements: set Element,
-}
-
-//The origin of about_blank
-/*
-fact originOfAboutBlank{
-	all doc: Document|{
-		//doc.url = ABOUT_BLANK implies 
-
-	}
-}*/
-
-enum CHARACTEREncoding{UTF8}
-enum URLType{NORM, ABOUT_BLANK, DATA}
-enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
-
-sig HTMLElement extends Element{
-	head: HEADElement,
-	body: BODYElement,
-}
-
-sig HEADElement extends Element{}
-sig BODYElement extends Element{}
-//iframe can nest other browsing contexts
-sig IframeElement extends Element{
-	nestedContext: BrowsingContext,
-}
-sig Element{} //html element
-
-
 /*TODO: Because they are nested through an element, child browsing contexts are always tied to a 
 specific  Document in their parent browsing context. User agents must not allow the user to interact 
 with child browsing contexts of elements that are in Documents that are not themselves fully active.*/
 
 
-//5.1.6 Browsing context names
+//-----------------------------------------CHECKS------------------------------------/
 
+//there should be no loops
+check NoLoopInParentChildContext{
+	no disj pctx,cctx:BrowsingContext|{
+		pctx in cctx.^ancestors
+		cctx in pctx.^ancestors
+	}
+}for 5
+
+
+run unitOfRelatedSimilarOriginBrowsingContext_areSane{
+	some ctxa,ctxb:BrowsingContext|{
+		some unitctx:UnitOfRelatedSimilarOriginBrowsingContext|{
+			(ctxa+ctxb) in unitctx.browsingContexts
+			ctxa.activeDocument.origin != ctxb.activeDocument.origin
+		}
+	}
+} for 5
 
 
 
