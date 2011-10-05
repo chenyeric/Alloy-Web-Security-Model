@@ -6,7 +6,10 @@ sig HTMLElement extends Element{
 	body: BODYElement,
 }
 
-sig ScriptElement extends Element{}
+sig ScriptElement extends Element{
+	canAccess: set ScriptableObject,
+}
+
 sig HEADElement extends Element{}
 sig BODYElement extends Element{}
 //iframe can nest other browsing contexts
@@ -89,53 +92,42 @@ run topNavigationCanHappen{
 			ctx = frm.nestedContext.top
 			ctx in frm.nestedContext.canNavigate
 		}
-	}
 } for 4
 
-
 //-----------------------------CHECKS FOR IFRAME + SANDBOX------------------------/
-
-/*
 //sandbox navigation policy checker
 check NestedAllowNavigationWorks{
-	no disj nestedfrm, sandboxfrm, topfrm, frm:Frame, win:Window|{
-		sandboxfrm in IframeSandbox
-		(sandboxfrm+topfrm+nestedfrm) in win.contentFrames //if the top frame of a window sandboxes another frame...
-		topfrm = win.top
-		nestedfrm in sandboxfrm.*childFrame //sandboxed frame has a childframe
+	no disj nestedctx, sandboxctx, topctx:BrowsingContext|{
+		topctx.isTop = True
+		topctx = sandboxctx.parent
+		sandboxctx = nestedctx.parent
+
+		NOT_ALLOW_TOP_NAVIGATION in sandboxctx.contextContainer.sandboxPolicies //policy exists to disallow top navigation
 		
-		NOT_ALLOW_TOP_NAVIGATION in sandboxfrm.policies //policy exists to disallow top navigation
-
-		//the nested, sandboxed frame should no tbe able to initiate another frame that navigates the top
-		nestedfrm = frm.initiator
-
-		//topfrm.dom.effectiveOrigin = frm.dom.effectiveOrigin
-		topfrm in frm.canNavigate
+		topctx in nestedctx.canNavigate // nestedctx can navigate the top
 		
 	}
 } for 5
 
 check NestedAllowSameOriginWorks{
-	all disj sandboxfrm, frm, randomfrm:Frame{
-		{
-			sandboxfrm in IframeSandbox 
-			frm in sandboxfrm.*childFrame  //iframe sandbox sandboxes a frame
-			NOT_ALLOW_SAME_ORIGIN in most_strict_sandbox_policy[sandboxfrm] //but the sandbox is putinto a unique origin
+	all disj sandboxctx, ctx, randomctx:BrowsingContext{
+		{ 
+			sandboxctx in ctx.ancestors  //iframe sandbox sandboxes a frame
+			NOT_ALLOW_SAME_ORIGIN in most_strict_sandbox_policy[sandboxctx.contextContainer] //but the sandbox is put into a unique origin
 		}implies{ //then the embedded frame must also be in a unique origin
-			frm.dom.effectiveOrigin != randomfrm.dom.effectiveOrigin  
-			frm.dom.effectiveOrigin != randomfrm.dom.defaultOrigin
+			ctx.activeDocument.effectiveOrigin != randomfrm.dom.effectiveOrigin  
+			ctx.activeDocument.effectiveOrigin != randomfrm.dom.defaultOrigin
 		}
 	}
 }for 7
 
+
 check NestedAllowScriptPolicyWorks{
-	all disj sandboxfrm, frm:Frame{
-		{
-			sandboxfrm in IframeSandbox 
-			frm in sandboxfrm.*childFrame  //iframe sandbox sandboxes a frame
-			NOT_ALLOW_SCRIPTS in most_strict_sandbox_policy[sandboxfrm] //but the sandbox has scripts disabled
+	all disj sandboxctx, ctx:BrowsingContext{
+		{			
+			sandboxctx in ctx.ancestors  //iframe sandbox sandboxes a frame
+			NOT_ALLOW_SCRIPTS in most_strict_sandbox_policy[sandboxctx.contextContainer] //but the sandbox has scripts disabled
 		}implies
-			no frm.scripts //then the frame must also have scripts disabled
+			no (ctx.activeDocument.elements && ScriptElement) //then the frame must also have scripts disabled
 	}
 }for 7
-*/

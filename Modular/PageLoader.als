@@ -2,6 +2,7 @@
 open DNSAndOrigin
 open basicDeclarations
 open HTMLElements
+open DOM_API
 
 enum Bool { TRUE, FALSE} //hack to get boolean
 sig String{} //used in things like browsing context name
@@ -102,8 +103,16 @@ fact browsingContext_noLoopContext{
 }
 
 fact browsingContext_parentChildRelationship{
+	//a is b's parent iff b is a's child
 	all cctx,pctx:BrowsingContext|{
 		pctx = cctx.parent iff cctx in pctx.children
+	}
+
+	//a is b's parent only if b is an iframe inside a
+	all cctx,pctx:BrowsingContext|{
+		pctx = cctx.parent iff(
+			pctx = ccctx.~nestedContext.~elements.~activeDocument
+		)
 	}
 }
 
@@ -303,129 +312,9 @@ run unitOfRelatedSimilarOriginBrowsingContext_areSane{
 } for 5
 
 
-
-
-
 //=================================ABSOLETE BELOW===================================//
 
 /*
-
-
-abstract sig SOPObject {
-   enforcer : one SOPEnforcer,   //Which Browser is doing the enforcement? Need a place for variations
-   canAccess : set SOPObject,
-   canNavigate: set SOPObject,
-   //More to come such as canRead, canWrite, canNavigate, etc
-}{
-
-}
-
-
-
-fact accessOnlyThroughSameEnforcer { // if 2 objects are not in the same browser, they can't access each other
-   all disj o1, o2: SOPObject | 
-       o1 in o2.canAccess implies o1.enforcer = o2.enforcer
-}
-
-
-
-abstract sig SOPEnforcer{}
-
-abstract sig FirefoxSOP extends SOPEnforcer{}
-lone sig Firefox2SOP extends FirefoxSOP{}
-lone sig Firefox3SOP extends FirefoxSOP{}
-lone sig Firefox4SOP extends FirefoxSOP{}
-
-abstract sig IESOP extends SOPEnforcer{}
-lone sig IE6SOP extends IESOP{}
-lone sig IE7SOP extends IESOP{}
-lone sig IE8SOP extends IESOP{}
-
-lone sig SafariSOP extends SOPEnforcer{}
-lone sig OperaSOP extends SOPEnforcer{}
-lone sig ChromeSOP extends SOPEnforcer{}
-lone sig AndroidSOP extends SOPEnforcer{}
-
-lone sig specSOP extends SOPEnforcer{}
-
-
-
-
-
-
-//--------------------------------FRAME----------------------------/
-sig Frame extends SOPObject{
-	initiator: lone Frame,
-	dom : one documentDOM,
-	scripts: set scriptDOM,
-	parentFrame: lone Frame,
-	childFrame: set Frame,
-    mimeType:  one MIMEType,
-	attribute: set FrameAttribute,
-}
-{ 
-    this in canNavigate
-    this in canAccess
-}
-
-//certain security policies require frames to opt-in to their policy, i.e., BEEP
-enum FrameAttribute{BEEP}
-
-
-
-//bijection btw frame and dom
-fact OneFramePerDom{
-	no this_dom:documentDOM | no this_dom.~dom // onto
-	dom in Frame one -> one documentDOM // one-to-one
-}
-
-//relationship between frame and script
-fact OneFramePerScript {
-    no s:scriptDOM | no s.~scripts //"onto", though scripts is not a function
-    scripts in Frame one -> set scriptDOM //one-to-many
-}
-
-
-//abstract sig DOMObject extends SOPObject {}
-
-//add other DOMObjects here, such as imgs, etc.
-
-//script object
-sig scriptDOM {
-	srcOrigin: one Origin, //the source origin of the script
-	embeddedOrigin: one Origin, // the origin that embedded this script
-	attribute: set scriptAttribute,
-    mimeType:  one MIMEType,
-	transaction: one HTTPTransaction
-}{
-	INLINE in attribute implies srcOrigin = embeddedOrigin //only way for inline scripts to happen
-}
-
-//varrious attrbutes for scripts, ie inline, sanitized, etc
-enum scriptAttribute {INLINE, SANITIZED}
-
-fact scriptDocumentRelation {
-  all s:scriptDOM, d: scripts.s.dom | {
-      (some d.effectiveOrigin) => s.embeddedOrigin = d.effectiveOrigin
-      (no d.effectiveOrigin) => s.embeddedOrigin = d.defaultOrigin
-     
-   }
-}
-
-
-sig documentDOM {
-   defaultOrigin : one Origin ,
-   effectiveOrigin : lone Origin,  // the effective origin is from document.domain, which can also be unused.
-	transaction: one HTTPTransaction
-}
-{
-  //model the shortening of document.domain
-  //what is allowed may be browser dependent
-  //defaultOrigin.port = effectiveOrigin.port
-  defaultOrigin.schema = effectiveOrigin.schema
-  isSubdomainOf[defaultOrigin.dnslabel, effectiveOrigin.dnslabel]
-}
-
 fact SOPEnforcementForCanAccess {
   all disj f1, f2: Frame | {
     some f2.dom.effectiveOrigin => { //case where f2 sets document.domain
