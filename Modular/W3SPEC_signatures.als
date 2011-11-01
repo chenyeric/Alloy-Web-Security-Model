@@ -56,6 +56,18 @@ data mining tools are likely to never instantiate browsing contexts.
 */
 }
 
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 5.1.5 Groupings of browsing contexts XXXXXXXXXXXXXXXXXXXXXXXXXXX
+sig UnitOfRelatedBrowsingContext{
+	browsingContexts: set BrowsingContext,
+	unitOfsimilarOrigin: set UnitOfRelatedSimilarOriginBrowsingContext,
+}
+
+sig UnitOfRelatedSimilarOriginBrowsingContext{
+	origin: one Origin,
+	browsingContexts: set BrowsingContext,
+}
+
+
 //================================HTML ELEMENTS===========================/
 
 sig Document {
@@ -85,8 +97,11 @@ enum CHARACTEREncoding{UTF8}
 enum URLType{NORM, ABOUT_BLANK, DATA}
 enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 
-
-sig Element{} //html element
+//html element
+sig Element{
+	cause: lone DomManipulationEvent, // how is this element created?
+	host: lone Document
+} 
 
 sig HTMLElement extends Element{
 	head: HEADElement,
@@ -99,6 +114,7 @@ sig BODYElement extends Element{}
 sig IframeElement extends Element{
 	nestedContext: BrowsingContext,
 	sandboxPolicies: set iframe_sandbox_policy,
+	is_seamless: Bool
 }
 
 enum iframe_sandbox_policy {
@@ -108,62 +124,34 @@ enum iframe_sandbox_policy {
 	NOT_ALLOW_SCRIPTS
 }
 
+//================================Events==========================/
+sig Event{}
 
 //================================SCRIPTS==============================/
+//HTML script tag
 sig ScriptElement extends Element{
-	canAccess: set ScriptableObject,
+	script: ScriptObject
 }
 
-sig ScriptableObject{} //all elements that can be accessed by script
-
-sig scriptObj_BrowsingContext extends ScriptableObject{
-	domObj: BrowsingContext,
-
+//the actual script
+sig ScriptObject{
+	element: ScriptElement, //link scripts with their html element
+	browsingContext: BrowsingContext,
 	//section 5.1.6
 	func_form_target: BrowsingContext,
-	func_open: BrowsingContext,
+	func_open: lone BrowsingContext,
 	func_self: BrowsingContext,
-	func_blank: BrowsingContext,
+	func_blank: lone BrowsingContext,
 	func_parent: BrowsingContext,
 	func_top: BrowsingContext
+} 
+
+sig DomManipulationEvent extends Event{
+	oldElement: lone Element,
+	newElement: lone Element,
+	script: scriptObj
 }
 
-/* 
- ======> http://dvcs.w3.org/hg/domcore/raw-file/tip/Overview.html#interface-document
- 
-	readonly attribute DOMString URL;
-  readonly attribute DOMString documentURI;
-  readonly attribute DOMString compatMode;
 
-           attribute DOMString charset;
-  readonly attribute DOMString characterSet;
-  readonly attribute DOMString defaultCharset;
-  readonly attribute DOMString contentType;
-
-  readonly attribute DocumentType? doctype;
-  readonly attribute Element? documentElement;*/
-sig scriptObj_Document extends ScriptableObject{	
-	domObj: Document,
-	domCharset: CHARACTEREncoding,
-	domType: scriptObj_MIMEType,
-	domUrl: scriptObj_URL,
-	domElement: scriptObj_Element,
-}
-
-sig scriptObj_CHARACTEREncoding extends ScriptableObject{
-	domObj: CHARACTEREncoding,
-}
-
-sig scriptObj_URL extends ScriptableObject{
-	domObj: URLType
-}
-
-sig scriptObj_MIMEType extends ScriptableObject{
-	domObj: MIMEType
-}
-
-sig scriptObj_Element extends ScriptableObject{
-	domObj: Element
-}
 
 

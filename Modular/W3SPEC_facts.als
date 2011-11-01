@@ -51,7 +51,7 @@ fact browsingContext_linkTopWithChild{
 	all ctxa,ctxb:BrowsingContext|{
 		{
 			ctxa.isTop = TRUE
-			ctxb in ctxa.children
+			ctxb in ctxa.*children
 		} implies ctxa = ctxb.top
 	}
 }
@@ -66,6 +66,7 @@ fact documentAndBrowsingContext{
 		doc in bc.documents iff bc = doc.browsingContext
 	}	
 }
+
 
 
 //describes the relationship between directly nested browsing contexts
@@ -103,53 +104,45 @@ fact browsingContext_fullyActiveBrowsingContext{
 		}
 }
 
-//browser navigation policy
-/*A browsing context A is allowed to navigate a second browsing context B if one of the following conditions is true:
 
-1) Either the origin of the active document of A is the same as the origin of the active document of B, or
-2) The browsing context A is a nested browsing context with a top-level browsing context, and its top-level browsing context is B, or
-3) The browsing context B is an auxiliary browsing context and A is allowed to navigate B's opener browsing context, or
-4) The browsing context B is not a top-level browsing context, but there exists an ancestor browsing context of B whose 
-active document has the same origin as the active document of A (possibly in fact being A itself).*/
+//browser navigation policy ""FOR NO SANDBOX""
+//A browsing context A is allowed to navigate a second browsing context B if one of the following conditions is true
+//1) Either the origin of the active document of A is the same as the origin of the active document of B, or
+//2) The browsing context A is a nested browsing context with a top-level browsing context, and its top-level browsing context is B, or
+//3) The browsing context B is an auxiliary browsing context and A is allowed to navigate B's opener browsing context, or
+//4) The browsing context B is not a top-level browsing context, but there exists an ancestor browsing context of B whose 
+//active document has the same origin as the active document of A (possibly in fact being A itself).
 fact browsingContext_Navigation{
 	all disj ctxA, ctxB:BrowsingContext|{
-		ctxB in ctxA.canNavigate iff (
-			ctxA.activeDocument.origin = ctxB.activeDocument.origin or // 1)
-			(ctxA in ctxB.children and ctxB.isTop = TRUE) or //2
-			(some ctxB.opener and ctxB.opener in ctxA.canNavigate) or //3
-			some ctxC:BrowsingContext |{ //4
-				ctxC in ctxB.ancestors
-				ctxB.isTop = FALSE  
-				ctxC.activeDocument.origin = ctxA.activeDocument.origin
-			}
-		)
+		no ctxB.contextContainer.sandboxPolicies implies{
+			ctxB in ctxA.canNavigate iff (
+				(ctxA.activeDocument.origin = ctxB.activeDocument.origin) or // 1)
+				(ctxB in ctxA.ancestors and ctxB.isTop = TRUE) or //2
+				(some ctxB.opener and ctxB.opener in ctxA.canNavigate) or //3
+				some ctxC:BrowsingContext |{ //4
+					ctxC in ctxB.ancestors
+					ctxB.isTop = FALSE  
+					ctxC.activeDocument.origin = ctxA.activeDocument.origin
+				}
+			)
+		}
 	}
 }
 
-/*
-Directly reachable browsing contexts are:
-1)The browsing context itself.
-2)All the browsing context's child browsing contexts.
-3)The browsing context's parent browsing context.
-4)All the browsing contexts that have the browsing context as their opener browsing context.
-5)The browsing context's opener browsing context.
-*/
+
+//Directly reachable browsing contexts are:
+//1)The browsing context itself.
+//2)All the browsing context's child browsing contexts.
+//3)The browsing context's parent browsing context.
+//4)All the browsing contexts that have the browsing context as their opener browsing context.
+//5)The browsing context's opener browsing context.
+
 fact browsingContext_directlyReachable{
 	all ctx:BrowsingContext|{
 		ctx.directlyReachable = (ctx + ctx.children + ctx.creator + ctx.opened)
 	}
 }
 
-//XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 5.1.5 Groupings of browsing contexts XXXXXXXXXXXXXXXXXXXXXXXXXXX
-sig UnitOfRelatedBrowsingContext{
-	browsingContexts: set BrowsingContext,
-	unitOfsimilarOrigin: set UnitOfRelatedSimilarOriginBrowsingContext,
-}
-
-sig UnitOfRelatedSimilarOriginBrowsingContext{
-	origin: one Origin,
-	browsingContexts: set BrowsingContext,
-}
 
 //The transitive closure of all the browsing contexts that are directly reachable browsing contexts 
 //forms a unit of related browsing contexts.
@@ -160,6 +153,8 @@ fact unitOfRelatedBrowsingContext_definition{
 		}
 	}
 }
+
+
 
 fact unitOfRelatedBrowsingContext_no_duplication{
 	no disj unitctxa, unitctxb:UnitOfRelatedBrowsingContext|{
@@ -186,9 +181,9 @@ fact unitOfRelatedSimilarOriginBrowsingContext_definition{
 }
 
 fact OneUnitOfRelatedSimilarOriginBrowsingContextPerOrigin{
-	no unitctxa, unitctxb: UnitOfRelatedSimilarOriginBrowsingContext|{
+	no disj unitctxa, unitctxb: UnitOfRelatedSimilarOriginBrowsingContext|{
 		some ctx: BrowsingContext{
-			ctx in unitctxa.browsingContexts and ctx in unitctxb.browsingContexts
+			(ctx in unitctxa.browsingContexts) and (ctx in unitctxb.browsingContexts)
 		}	
 	}
 }
@@ -202,12 +197,12 @@ fact originOfSimilarBrowsingContext{
 	}
 }
 
-/*TODO: Because they are nested through an element, child browsing contexts are always tied to a 
-specific  Document in their parent browsing context. User agents must not allow the user to interact 
-with child browsing contexts of elements that are in Documents that are not themselves fully active.*/
+//TODO: Because they are nested through an element, child browsing contexts are always tied to a 
+//specific  Document in their parent browsing context. User agents must not allow the user to interact 
+//with child browsing contexts of elements that are in Documents that are not themselves fully active.
 
 
-//-----------------------------------------CHECKS------------------------------------/
+//----------------------------Page Loader CHECKS------------------------------------/
 
 //there should be no loops
 check NoLoopInParentChildContext{
@@ -225,98 +220,7 @@ run unitOfRelatedSimilarOriginBrowsingContext_areSane{
 			ctxa.activeDocument.origin != ctxb.activeDocument.origin
 		}
 	}
-} for 5
-
-
-//=================================ABSOLETE BELOW===================================//
-
-/*
-fact SOPEnforcementForCanAccess {
-  all disj f1, f2: Frame | {
-    some f2.dom.effectiveOrigin => { //case where f2 sets document.domain
-       f1.enforcer !in FirefoxSOP => 
-            f2 in f1.canAccess implies 
-                 f1.dom.effectiveOrigin = f2.dom.effectiveOrigin
-       f1.enforcer in FirefoxSOP => 
-            f2 in f1.canAccess implies {
-                 ( f1.dom.effectiveOrigin = f2.dom.effectiveOrigin) or 
-                 ( f1.dom.defaultOrigin = f2.dom.effectiveOrigin ) or 
-                 ( f1.dom.effectiveOrigin = f2.dom.defaultOrigin) or
-                 ( f1.dom.defaultOrigin = f2.dom.defaultOrigin)
-             }
-    }
-    no f2.dom.effectiveOrigin => { // case where f2 does not set document.origin
-       f2 in f1.canAccess implies {
-             (no f1.dom.effectiveOrigin) 
-             ( f1.dom.defaultOrigin = f2.dom.defaultOrigin)
-       }
-    }
-
-  }
-}
-
-pred canAccessChained [accessor:SOPObject, resource:SOPObject] {
-   resource in accessor.*canAccess
-}
-
-
-check inLinescriptsAreSane{
-	no s:scriptDOM | {
-		INLINE in s.attribute
-		s.srcOrigin!=s.embeddedOrigin
-	}
-}for 5
-
-run completesanity {
-  some o1:Frame | o1.enforcer = IE6SOP
-}
-for 3
-
-run effectiveOriginSanityCheck {
-  some disj o1, o2: Frame | {
-         o1.enforcer = o2.enforcer
-         o1.dom.defaultOrigin != o2.dom.defaultOrigin
-         o2 in o1.*canAccess
-  }
 } for 3
-
-
-run firefoxAccessThroughDefaultOrigin{
- some disj o1, o2: Frame | {
-         o1.enforcer = Firefox4SOP
-         o2.enforcer = Firefox4SOP
-         o1.dom.effectiveOrigin != o2.dom.effectiveOrigin
-         o2 in o1.*canAccess
-  }
-
-} for 3 but 1 NetworkEndpoint
-
-
-
-run unauthorizedAccessForSpec {
-  some disj vict, atk: Frame|  {
-         vict.enforcer = specSOP
-         atk.enforcer = specSOP
-         vict.dom.defaultOrigin = vict.dom.effectiveOrigin // victim sets effective = default
-         !isSubdomainOf[atk.dom.defaultOrigin.dnslabel, vict.dom.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
-         canAccessChained[atk, vict]
-  }
-} for 8 but 1 NetworkEndpoint
-
-
-run unauthorizedAccessForFirefox { //discovers the Firefox bug
-  some disj vict, atk: Frame |  {
-         vict.enforcer = Firefox4SOP
-         atk.enforcer = Firefox4SOP
-         no intermediate:Frame | {intermediate != vict and intermediate.dom.defaultOrigin = vict.dom.defaultOrigin}
-         vict.dom.defaultOrigin = vict.dom.effectiveOrigin // victim sets effective = default
-         !isSubdomainOf[atk.dom.defaultOrigin.dnslabel, vict.dom.defaultOrigin.dnslabel] //Attacker is not subdomain of vict, which makes attack trivial
-         canAccessChained[atk, vict]
-  }
-} for 4 but 1 NetworkEndpoint
-
-
-*/
 
 
 //====================================HTML ELEMENTS================/
@@ -383,12 +287,20 @@ fact IframeElement_SandboxScriptPolicy{
 	}
 }
 
+//popups are disabled for iframe sandbox
+fact iFrameElement_SandboxCannotOpenPopUps{
+	all sandbox_ctx, popup_ctx:BrowsingContext|{
+		some sandbox_ctx.contextContainer.sandboxPolicies implies
+			popup_ctx.opener != sandbox_ctx
+	}
+}
+
 run topNavigationCanHappen{
 		some frm: IframeElement, ctx:BrowsingContext{
 			ctx = frm.nestedContext.top
 			ctx in frm.nestedContext.canNavigate
-		}
-} for 4
+		} 
+} for 5
 
 //-----------------------------CHECKS FOR IFRAME + SANDBOX------------------------/
 //sandbox navigation policy checker
@@ -430,29 +342,82 @@ check NestedAllowScriptPolicyWorks{
 
 //============================JAVASCRIPT ===========================/
 
+fact scriptElement_scriptObject_relationship{
+	all scriptEle: ScriptElement, scriptObj:ScriptObject|{
+		scriptObj = scriptEle.script iff scriptEle= scriptObj.element
+	}
+}
 
 //=====================Same Origin Policy
 //User agents must raise a SECURITY_ERR exception whenever any 
 //properties of a Document object are accessed by scripts whose effective 
 //script origin is not the same as the Document's effective script origin.
-fact SameOriginPolicy{
-	all script: ScriptElement, obj:ScriptableObject|{
-		some doc:scriptObj_Document|{
-			obj in script.canAccess iff (
-				obj in doc and
-				doc.domObj.effectiveScriptOrigin = script.~elements.effectiveScriptOrigin
-			)
+pred SOP_pass[script:ScriptObject, element:Element]{
+	script.element.host.effectiveScriptOrigin = element.host.effectiveScriptOrigin
+
+}
+
+// which browsing context is the script belong to?
+fact scriptObject_BrowsingContext_relationship{
+	all script:ScriptObject, ctx:BrowsingContext|{
+		ctx = script.browsingContext iff ctx = script.element.~elements.browsingContext
+	}
+}
+
+//script can manipulate a dom object if SOP allows it
+fact domManipulationEvent_definition{
+	all dme: DomManipulationEvent|{
+		SOP_pass[dme.script,dme.oldElement]
+		SOP_pass[dme.script,dme.newElement]
+	}
+}
+
+//Only the most recent element is connected with the DOM
+fact domManipulationEvent_MostRecentElementConnectedWithDom{
+	all ele:Elements|{
+		some ele.host implies {  //if element is attached with dom
+			no ele.~oldElement		// then this must be the most recent version
+			no ele.^(cause.oldElement).host  //none of its older versions are attached to DOM
 		}
 	}
 }
 
-//one to one relationship
-fact script_BrowsingContext_relationship{
-	all disj scriptctxa,scriptctxb:scriptObj_BrowsingContext|{
-		one ctxa: BrowsingContext|{
-			scriptctxa.domObj = ctxa
-			scriptctxb.domObj != ctxa
-		} 
+//=================5.1.6 browsing context keywords
+//	func_form_target: BrowsingContext,
+fact scriptObject_form_target{
+	all ctx:BrowsingContext, script:ScriptObject|{
+		ctx = script.func_form_target iff(
+			(ctx = script.browsingContext and script.browsingContext.contextContainer.is_seamless = FALSE) or //for non seamless iframes, form target is the current frame
+			((ctx = script.browsingContext.parent or ctx = script.browsingContext.opener) and
+				script.browsingContext.contextContainer.is_seamless = TRUE) //for seamless iframes, form target is its nearest ancestor
+		)
 	}
 }
+
+//	func_open: BrowsingContext,
+fact scriptObject_BrowsingContext_open{
+	all ctx:BrowsingContext, script:ScriptObject|{
+		ctx = script.func_open iff (
+			(ctx.opener = script.browsingContext) and (no script.browsingContext.contextContainer.sandboxPolicies)  //sandbox can't open new window
+		)
+	}
+}
+
+
+//	func_self: BrowsingContext,
+fact scriptObject_BrowsingContext_self{
+	all ctx: BrowsingContext, script:ScriptObject|{
+		ctx = script.fn_self iff ctx = script.browsingContext
+	}
+}
+
+//	func_blank: BrowsingContext,
+fact scriptObject_BrowsingContext_blank{
+
+
+}
+
+//	func_parent: BrowsingContext,
+//	func_top: BrowsingContex
+
 
