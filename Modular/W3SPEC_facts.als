@@ -18,6 +18,14 @@ fact browsingContext_noLoopContext{
 	}
 }
 
+//Iframe/browsing context relationship
+fact browsingContext_IframeRelationship{
+	all ctx:BrowsingContext, iframe:IframeElement|{
+		(ctx = iframe.nestedContext) iff (iframe = ctx.contextContainer)
+	}
+}
+
+
 fact browsingContext_parentChildRelationship{
 	//a is b's parent iff b is a's child
 	all cctx,pctx:BrowsingContext|{
@@ -261,6 +269,7 @@ fact IframeElement_SandboxNavigationPolicy{
 	}
 }
 
+
 //TODO sandbox plugin flag
 
 //TODO seamless flag
@@ -289,9 +298,9 @@ fact IframeElement_SandboxScriptPolicy{
 
 //popups are disabled for iframe sandbox
 fact iFrameElement_SandboxCannotOpenPopUps{
-	all sandbox_ctx, popup_ctx:BrowsingContext|{
+	all sandbox_ctx:BrowsingContext|{
 		some sandbox_ctx.contextContainer.sandboxPolicies implies
-			popup_ctx.opener != sandbox_ctx
+			no sandbox_ctx.opened
 	}
 }
 
@@ -341,7 +350,7 @@ check NestedAllowScriptPolicyWorks{
 }for 7
 
 //============================JAVASCRIPT ===========================/
-
+//each script tag will have a script object associated with it
 fact scriptElement_scriptObject_relationship{
 	all scriptEle: ScriptElement, scriptObj:ScriptObject|{
 		scriptObj = scriptEle.script iff scriptEle= scriptObj.element
@@ -352,9 +361,8 @@ fact scriptElement_scriptObject_relationship{
 //User agents must raise a SECURITY_ERR exception whenever any 
 //properties of a Document object are accessed by scripts whose effective 
 //script origin is not the same as the Document's effective script origin.
-pred SOP_pass[script:ScriptObject, element:Element]{
-	script.element.host.effectiveScriptOrigin = element.host.effectiveScriptOrigin
-
+pred SOP_pass[script:ScriptObject, ele:Element]{
+	script.element.host.effectiveScriptOrigin = ele.host.effectiveScriptOrigin
 }
 
 // which browsing context is the script belong to?
@@ -364,21 +372,32 @@ fact scriptObject_BrowsingContext_relationship{
 	}
 }
 
+
 //script can manipulate a dom object if SOP allows it
 fact domManipulationEvent_definition{
 	all dme: DomManipulationEvent|{
-		SOP_pass[dme.script,dme.oldElement]
-		SOP_pass[dme.script,dme.newElement]
+		(some dme.oldElement and some dme.newElement) implies{
+			SOP_pass[dme.script,dme.oldElement]
+			SOP_pass[dme.script,dme.newElement]
+			dme.oldElement != dme.newElement
+		}
 	}
 }
 
 //Only the most recent element is connected with the DOM
 fact domManipulationEvent_MostRecentElementConnectedWithDom{
-	all ele:Elements|{
+	all ele:Element|{
 		some ele.host implies {  //if element is attached with dom
 			no ele.~oldElement		// then this must be the most recent version
 			no ele.^(cause.oldElement).host  //none of its older versions are attached to DOM
 		}
+	}
+}
+
+fact domManipulationEvent_DOMChangeOnlyOccurOnSameTag{
+	all dme: DomManipulationEvent|{
+		(some dme.oldElement and some dme.newElement) implies
+			dme.oldElement.tag = dme.newElement.tag
 	}
 }
 
@@ -407,7 +426,7 @@ fact scriptObject_BrowsingContext_open{
 //	func_self: BrowsingContext,
 fact scriptObject_BrowsingContext_self{
 	all ctx: BrowsingContext, script:ScriptObject|{
-		ctx = script.fn_self iff ctx = script.browsingContext
+		ctx = script.func_self iff ctx = script.browsingContext
 	}
 }
 
@@ -417,7 +436,40 @@ fact scriptObject_BrowsingContext_blank{
 
 }
 
+
 //	func_parent: BrowsingContext,
 //	func_top: BrowsingContex
 
 
+// ============================CHECK FOR JAVASCRIPT====================/
+
+run DomManipulationEventsAreSane{
+	some disj dme1,dme2:DomManipulationEvent|{
+		no dme1.oldElement
+		no dme2.newElement
+	}
+}for 5
+
+
+run sanitycheck{
+
+
+	some oldfrm,newfrm:IframeElement|{
+		newfrm = oldfrm.^(~oldElement.newElement) //new frame is created from old frame via some scripts
+		some oldfrm.sandboxPolicies
+		no newfrm.sandboxPolicies
+		some newfrm.nestedContext.opened
+	}
+
+}for 6
+
+check scriptObject_BypassIframeSandboxPopup{
+	all oldfrm, newfrm:IframeElement | {
+		{
+			newfrm = oldfrm.*(~oldElement.newElement) //new frame is created from old frame via some scripts
+			some oldfrm.sandboxPolicies //old frame is sandboxed
+		}implies {
+			no newfrm.nestedContext.opened //the new frame cannot open any popups
+		}
+	}
+}for 7

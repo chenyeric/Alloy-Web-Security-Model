@@ -1,8 +1,9 @@
 open DNSAndOrigin
-open basicDeclarations
+//open basicDeclarations
 
 
 enum Bool { TRUE, FALSE} //hack to get boolean
+enum HTMLtag {html,body, head, iframe, script} 
 sig string{} //used in things like browsing context name
 
 
@@ -28,7 +29,7 @@ sig BrowsingContext {
 	
 	//for nested browsing contexts
 	parentDocument: lone Document,
-	contextContainer: lone Element,
+	contextContainer: lone IframeElement,
 	parent: lone BrowsingContext,
 	ancestors: set BrowsingContext,
 	top: one BrowsingContext,
@@ -100,21 +101,32 @@ enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 //html element
 sig Element{
 	cause: lone DomManipulationEvent, // how is this element created?
-	host: lone Document
+	host: lone Document,
+	tag: HTMLtag   //this element MUST exist for every element
 } 
 
 sig HTMLElement extends Element{
 	head: HEADElement,
 	body: BODYElement,
+}{
+	tag = html
 }
 
-sig HEADElement extends Element{}
-sig BODYElement extends Element{}
+sig HEADElement extends Element{}{
+	tag = head
+}
+
+sig BODYElement extends Element{}{
+	tag = body
+}
+
 //iframe can nest other browsing contexts
 sig IframeElement extends Element{
 	nestedContext: BrowsingContext,
 	sandboxPolicies: set iframe_sandbox_policy,
 	is_seamless: Bool
+}{
+	tag = iframe
 }
 
 enum iframe_sandbox_policy {
@@ -124,13 +136,15 @@ enum iframe_sandbox_policy {
 	NOT_ALLOW_SCRIPTS
 }
 
-//================================Events==========================/
-sig Event{}
+//================================Dom Events==========================/
+sig DomEvent{}
 
 //================================SCRIPTS==============================/
 //HTML script tag
 sig ScriptElement extends Element{
 	script: ScriptObject
+}{
+	tag = script
 }
 
 //the actual script
@@ -146,10 +160,10 @@ sig ScriptObject{
 	func_top: BrowsingContext
 } 
 
-sig DomManipulationEvent extends Event{
+sig DomManipulationEvent extends DomEvent{
 	oldElement: lone Element,
 	newElement: lone Element,
-	script: scriptObj
+	script: ScriptObject
 }
 
 
