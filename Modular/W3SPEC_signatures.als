@@ -8,11 +8,17 @@ sig string{} //used in things like browsing context name
 
 
 //================================Page Loader==============================/
-sig WindowProxy{} //the window object
-sig History{} //history object
+sig WindowProxy extends Window{} //the window object
+sig History{
+	docs: set Document,
+} //history object
+
+sig Window{
+	browsingContext: BrowsingContext
+}
 
 sig BrowsingContext {
-	window: set WindowProxy, //the unique window object that scripts can access
+	window: WindowProxy, //the unique window object that scripts can access
 	sessionHistory: one History, //the history object of this browsing context
     opener: lone BrowsingContext, //opener page
 	opened: set BrowsingContext, // all the browsing contexts that was opened
@@ -70,6 +76,9 @@ sig UnitOfRelatedSimilarOriginBrowsingContext{
 
 
 //================================HTML ELEMENTS===========================/
+sig Location {
+	href: Origin,
+}
 
 sig Document {
 
@@ -78,8 +87,9 @@ sig Document {
 	charset: one CHARACTEREncoding,
 	type: one MIMEType,
 	url: one URLType,
+	location: Location,
 	origin: one Origin,
-	effectiveScriptOrigin: lone Origin,	
+	effectiveScriptOrigin: one Origin,	
 
 	html: HTMLElement,
 	elements: set Element,
@@ -140,12 +150,18 @@ enum iframe_sandbox_policy {
 sig DomEvent{}
 
 //================================SCRIPTS==============================/
+//http://www.w3.org/TR/html5/scripting-1.html#scripting-1
+
 //HTML script tag
 sig ScriptElement extends Element{
 	script: ScriptObject
+	async: one Bool
+	defer: one Bool
+	src: lone string
 }{
 	tag = script
 }
+
 
 //the actual script
 sig ScriptObject{
@@ -166,6 +182,17 @@ sig DomManipulationEvent extends DomEvent{
 	script: ScriptObject
 }
 
+sig NavigationEvent extends DomEvent{
+	oldDoc: Document,
+	newDoc: Document,
+	script: lone ScriptObject
+}
 
+sig postMessageEvent extends DomEvent{
+	source: Window,
+	destination: Window,
+	script: ScriptObject,
+	origin: lone Origin
+}
 
 

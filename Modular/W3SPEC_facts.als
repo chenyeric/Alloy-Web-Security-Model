@@ -18,6 +18,7 @@ fact browsingContext_noLoopContext{
 	}
 }
 
+
 //Iframe/browsing context relationship
 fact browsingContext_IframeRelationship{
 	all ctx:BrowsingContext, iframe:IframeElement|{
@@ -68,13 +69,19 @@ fact browsingContext_linkTopWithChild{
 //fact browsingContext_name{}
 
 
-//document / BC relationship
+//document / Browsing context relationship
 fact documentAndBrowsingContext{
 	all doc:Document, bc:BrowsingContext|{
 		doc in bc.documents iff bc = doc.browsingContext
 	}	
 }
 
+//window Browsing context relationship
+fact windowAndBrowsingContext{
+	all win:Window, ctx:BrowsingContext|{
+		win = ctx.window iff ctx = win.browsingContext
+	}
+}
 
 
 //describes the relationship between directly nested browsing contexts
@@ -151,6 +158,12 @@ fact browsingContext_directlyReachable{
 	}
 }
 
+//using document.domain to set effectivescript origin
+fact document_effectiveScriptOrigin{
+	all doc: Document|{
+		isSubdomainOf[doc.effectiveScriptOrigin.dnslabel, doc.origin.dnslabel]
+	}
+}
 
 //The transitive closure of all the browsing contexts that are directly reachable browsing contexts 
 //forms a unit of related browsing contexts.
@@ -384,3 +397,40 @@ fact scriptObject_BrowsingContext_blank{
 //	func_parent: BrowsingContext,
 //	func_top: BrowsingContex
 
+//==========================5.4 SESSION HISTORY AND NAVIGATION=============
+fact History_is_unique{
+	all disj ctx1,ctx2:BrowsingContext|{
+		ctx1.sessionHistory != ctx2.sessionHistory
+	}
+}
+
+//TODO: model the other rules for the history object
+
+//5.5.1
+//locations are unique
+fact Location_definition{
+	all disj loc1,loc2:Location|{
+		loc1.~location != loc2.~location
+	}
+}
+
+//navigation event via document.location
+fact Location_navigation{
+	all ne: NavigationEvent |{
+		//if navigation is caused by a script, then the following must hold
+		some (
+			ne.script 
+			//TODO: add user interactive navigation here
+		) iff(
+			ne.script.element.host.effectiveScriptOrigin = ne.oldDoc.effectiveScriptOrigin or
+			ne.oldDoc.~activeDocument in ne.script.browsingContext.canNavigate
+		)
+	}
+}
+
+//11.4 Cross-domain messaging
+fact postMessage{
+	all pe: postMessageEvent|{
+		pe.script.element.host.effectiveScriptOrigin = pe.source.browsingContext.activeDocument.effectiveScriptOrigin
+	}
+}
