@@ -1,5 +1,5 @@
 
-
+open W3SPEC_facts
 //----------------------------Page Loader CHECKS------------------------------------/
 
 //there should be no loops
@@ -83,3 +83,15 @@ check scriptObject_BypassIframeSandboxPopup{
 		}
 	}
 }for 6
+
+check postMessageConfidentiality{
+	no pme: postMessageEvent{
+		some doc_src, doc_dest:Document{
+			doc_src.effectiveScriptOrigin != pme.source.browsingContext.activeDocument.effectiveScriptOrigin
+			doc_dest.effectiveScriptOrigin != pme.destination.browsingContext.activeDocument.effectiveScriptOrigin
+			(doc_src in pme.source.browsingContext.activeDocument.*(~oldDoc.newDoc)) or (doc_dest in pme.destination.browsingContext.activeDocument.*(~oldDoc.newDoc))
+		}
+	}
+}for 6
+
+// malicious scripts created by static scripts should not execute
