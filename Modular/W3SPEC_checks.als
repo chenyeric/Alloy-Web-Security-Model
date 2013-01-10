@@ -94,6 +94,13 @@ check postMessageConfidentiality{
 	}
 }for 6
 
+// ====================6.1.4 Event loops======================/
+check atLeastOneBrowsingContextPerEventLoop{
+	all el:EventLoop|{
+		some el.unitOfRelatedSimilarOriginBrowsingContext.browsingContexts
+	}
+}for 10
+
 // malicious scripts created by static scripts should not execute
 // placeholder right now
 check DominatrixssBlocksDynamicScripts{

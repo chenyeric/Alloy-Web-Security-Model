@@ -434,3 +434,14 @@ fact postMessage{
 		pe.script.element.host.effectiveScriptOrigin = pe.source.browsingContext.activeDocument.effectiveScriptOrigin
 	}
 }
+
+
+// ====================6.1.4 Event loops
+
+
+// Dominatrixss - http://code.google.com/p/dominatrixss-csp/
+//fact dominatrixss{
+//	
+		
+//	}
+//}

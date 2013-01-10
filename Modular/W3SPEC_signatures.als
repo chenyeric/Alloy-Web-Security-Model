@@ -48,6 +48,7 @@ sig BrowsingContext {
 
 	//grouping browsing context
 	directlyReachable: set BrowsingContext,
+
 }{
 
  /*In general, there is a 1-to-1 mapping from the Window object 
@@ -154,9 +155,9 @@ sig DomEvent{}
 
 //HTML script tag
 sig ScriptElement extends Element{
-	script: ScriptObject
-	async: one Bool
-	defer: one Bool
+	script: ScriptObject,
+	async: one Bool,
+	defer: one Bool,
 	src: lone string
 }{
 	tag = script
@@ -175,6 +176,17 @@ sig ScriptObject{
 	func_parent: BrowsingContext,
 	func_top: BrowsingContext
 } 
+
+// 6.1.4 Event loops - http://www.w3.org/html/wg/drafts/html/master/webappapis.html#event-loop
+sig EventLoop{
+	unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext,
+
+}{
+	//An event loop always has at least one browsing context.
+	some unitOfRelatedSimilarOriginBrowsingContext.browsingContexts
+}
+
+
 
 // methods that can be used to manipulate the dom
 enum domManipulationAPI{
