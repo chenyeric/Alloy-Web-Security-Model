@@ -176,10 +176,27 @@ sig ScriptObject{
 	func_top: BrowsingContext
 } 
 
+// methods that can be used to manipulate the dom
+enum domManipulationAPI{
+	//http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html
+	appendChild,
+	insertBefore,
+	replaceChild,
+
+	//3.4 dynamic markup insersion
+	//http://www.w3.org/TR/html5/dom.html#dynamic-markup-insertion
+	document_write,
+
+	//6.1.5 javascript: url scheme
+	//http://www.w3.org/html/wg/drafts/html/master/webappapis.html#javascript-protocol
+	javascriptUrl
+}
+
 sig DomManipulationEvent extends DomEvent{
 	oldElement: lone Element,
 	newElement: lone Element,
-	script: ScriptObject
+	script: ScriptObject,
+	method: domManipulationAPI
 }
 
 sig NavigationEvent extends DomEvent{
