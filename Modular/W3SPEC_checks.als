@@ -95,3 +95,13 @@ check postMessageConfidentiality{
 }for 6
 
 // malicious scripts created by static scripts should not execute
+// placeholder right now
+check DominatrixssBlocksDynamicScripts{
+	no dme:DomManipulationEvent|{ // no DOM node can be created where,
+		no dme.oldElement // the DOM node is a newly created node
+		dme.newElement in ScriptElement // the DOM node is a script node
+		
+		// the DOM node is NOT created through one of the legitimate ways
+		// i.e., the DOM node is not added through the whitelisted dom manipulation apis (appendChild, etc.)
+	}
+}for 10
