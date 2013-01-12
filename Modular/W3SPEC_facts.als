@@ -440,8 +440,8 @@ fact postMessage{
 
 
 // Dominatrixss - http://code.google.com/p/dominatrixss-csp/
-//fact dominatrixss{
-//	
-		
-//	}
-//}
+fact dominatrixss{
+	all dme: DomManipulationEvent|{
+
+	}	
+}

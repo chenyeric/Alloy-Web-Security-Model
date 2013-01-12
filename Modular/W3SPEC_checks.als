@@ -105,7 +105,6 @@ check atLeastOneBrowsingContextPerEventLoop{
 // placeholder right now
 check DominatrixssBlocksDynamicScripts{
 	no dme:DomManipulationEvent|{ // no DOM node can be created where,
-		no dme.oldElement // the DOM node is a newly created node
 		dme.newElement in ScriptElement // the DOM node is a script node
 		
 		// TODO: the DOM node is NOT created through one of the legitimate ways
