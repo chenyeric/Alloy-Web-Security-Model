@@ -435,13 +435,97 @@ fact postMessage{
 	}
 }
 
-
-// ====================6.1.4 Event loops
-
-
-// Dominatrixss - http://code.google.com/p/dominatrixss-csp/
-fact dominatrixss{
-	all dme: DomManipulationEvent|{
-
-	}	
+//6.1 eventloop
+//Set up ordered status
+open util/ordering[State] as State
+open util/ordering[State] as EventState
+sig State { 
+      setdocwrite: one Bool, 
+      setdoncontentloaded: one Bool,                            
+      seteventlope: one Bool,
+      setbrowsingcontext: one Bool
 }
+
+fact stateinti{
+     State/first.setdocwrite=0 && 
+     State/first.setdoncontentloaded =0&&
+     State/first.setbrowsingcontext =1 && 
+     State/first.seteventlope =1    
+}
+
+//doc.write has to be called before the doncontentloaded event
+fact doncontentstatus {
+     all st: State| st.setdoncontentloade=1 |
+     st/prevs.setdocwrite= 1 
+}
+
+//If an event loop's browsing contexts all go away, then the event loop goes away as well. A browsing context always has an event loop coordinating its activities
+fact eventloopstatus {
+     all st:State| st.setbrowsingcontext =0 |
+     st/nexts.seteventlope = 0  
+}
+
+sig EventSate {
+   eventloop : one EventLoop
+}
+fact eventstatetransfer {
+      all s: EventSate, s': s.next {
+      RunEvent [s.eventloop, s'.eventloop]
+  }
+}
+
+// Running the eventloop till meet the condition 
+pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
+         one x: s.eventloop | {
+          s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
+  }
+}
+
+
+
+//6.1 eventloop
+//Set up ordered status
+open util/ordering[State] as State
+open util/ordering[State] as EventState
+sig State { 
+      setdocwrite: one Bool, 
+      setdoncontentloaded: one Bool,                            
+      seteventlope: one Bool,
+      setbrowsingcontext: one Bool
+}
+
+fact stateinti{
+     State/first.setdocwrite=0 && 
+     State/first.setdoncontentloaded =0&&
+     State/first.setbrowsingcontext =1 && 
+     State/first.seteventlope =1    
+}
+
+//doc.write has to be called before the doncontentloaded event
+fact doncontentstatus {
+     all st: State| st.setdoncontentloade=1 |
+     st/prevs.setdocwrite= 1 
+}
+
+//If an event loop's browsing contexts all go away, then the event loop goes away as well. A browsing context always has an event loop coordinating its activities
+fact eventloopstatus {
+     all st:State| st.setbrowsingcontext =0 |
+     st/nexts.seteventlope = 0  
+}
+
+sig EventSate {
+   eventloop : one EventLoop
+}
+fact eventstatetransfer {
+      all s: EventSate, s': s.next {
+      RunEvent [s.eventloop, s'.eventloop]
+  }
+}
+
+// Running the eventloop till meet the condition 
+pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
+         one x: s.eventloop | {
+          s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
+  }
+}
+

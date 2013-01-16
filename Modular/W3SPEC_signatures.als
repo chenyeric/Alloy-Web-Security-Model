@@ -18,6 +18,7 @@ sig Window{
 }
 
 sig BrowsingContext {
+    
 	window: WindowProxy, //the unique window object that scripts can access
 	sessionHistory: one History, //the history object of this browsing context
     opener: lone BrowsingContext, //opener page
@@ -48,7 +49,7 @@ sig BrowsingContext {
 
 	//grouping browsing context
 	directlyReachable: set BrowsingContext,
-
+    
 }{
 
  /*In general, there is a 1-to-1 mapping from the Window object 
@@ -68,6 +69,8 @@ data mining tools are likely to never instantiate browsing contexts.
 sig UnitOfRelatedBrowsingContext{
 	browsingContexts: set BrowsingContext,
 	unitOfsimilarOrigin: set UnitOfRelatedSimilarOriginBrowsingContext,
+//There must be at least one event loop per user agent, and at most one event loop per unit of related similar-origin browsing contexts.
+                eventlope : lone EventLope
 }
 
 sig UnitOfRelatedSimilarOriginBrowsingContext{
@@ -155,9 +158,9 @@ sig DomEvent{}
 
 //HTML script tag
 sig ScriptElement extends Element{
-	script: ScriptObject,
-	async: one Bool,
-	defer: one Bool,
+	script: ScriptObject
+	async: one Bool
+	defer: one Bool
 	src: lone string
 }{
 	tag = script
@@ -177,38 +180,10 @@ sig ScriptObject{
 	func_top: BrowsingContext
 } 
 
-// 6.1.4 Event loops - http://www.w3.org/html/wg/drafts/html/master/webappapis.html#event-loop
-sig EventLoop{
-	unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext,
-
-}{
-	//An event loop always has at least one browsing context.
-	some unitOfRelatedSimilarOriginBrowsingContext.browsingContexts
-}
-
-
-
-// methods that can be used to manipulate the dom
-enum domManipulationAPI{
-	//http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html
-	appendChild,
-	insertBefore,
-	replaceChild,
-
-	//3.4 dynamic markup insersion
-	//http://www.w3.org/TR/html5/dom.html#dynamic-markup-insertion
-	document_write,
-
-	//6.1.5 javascript: url scheme
-	//http://www.w3.org/html/wg/drafts/html/master/webappapis.html#javascript-protocol
-	javascriptUrl
-}
-
 sig DomManipulationEvent extends DomEvent{
 	oldElement: lone Element,
 	newElement: lone Element,
-	script: ScriptObject,
-	method: domManipulationAPI
+	script: ScriptObject
 }
 
 sig NavigationEvent extends DomEvent{
@@ -224,4 +199,19 @@ sig postMessageEvent extends DomEvent{
 	origin: lone Origin
 }
 
+//6.1 eventloop
+enum Task {
+                     Events,
+                     Callbacks,
+                     Parsing,
+                     Resources,
+                     DomElements // similar to element, how to combine two sigs?
+}
 
+sig EventLope {
+              taskqueues : lone TaskQueue
+               browsingcontext : lone BrowsingContext//at most one browsingcontext for one eventloop
+}
+sig TaskQueue{
+          taskseq :  seq Task  // squence of taskqueues, can be   Events, Callbacks, Parsing etc.                     
+}
