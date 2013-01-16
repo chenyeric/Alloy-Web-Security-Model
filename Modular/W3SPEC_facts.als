@@ -1,5 +1,6 @@
 open W3SPEC_signatures
-
+open util/ordering[State] as State
+open util/ordering[State] as EventState
 
 //===================================PAGE LOADER ===================/
 //you can either have a parent context or an opener context, but not both
@@ -449,29 +450,23 @@ fact dominatrixss{
 
 //6.1 eventloop
 //Set up ordered status
-open util/ordering[State] as State
-open util/ordering[State] as EventState
-sig State { 
-      setdocwrite: one Bool, 
-      setdoncontentloaded: one Bool,                            
-      seteventlope: one Bool,
-      setbrowsingcontext: one Bool
-}
+
+
 
 fact stateinti{
      State/first.setdocwrite=0 && 
-     State/first.setdoncontentloaded =0&&
+     State/first.setdomcontentloaded =0&&
      State/first.setbrowsingcontext =1 && 
      State/first.seteventlope =1    
 }
 
-//doc.write has to be called before the doncontentloaded event
-fact doncontentstatus {
-     all st: State| st.setdoncontentloade=1 |
+//doc.write has to be called before the domcontentloaded event
+fact domcontentstatus {
+     all st: State| st.setdomcontentloade=1 |
      st/prevs.setdocwrite= 1 
 }
 
-//If an event loop's browsing contexts all go away, then the event loop goes away as well. A browsing context always has an event loop coordinating its activities
+//If anâ€ event loop'sâ€ browsing contextsâ€ all go away, then theâ€ event loopâ€ goes away as well. Aâ€ browsing contextâ€ always has anâ€ event loopâ€ coordinating its activities
 fact eventloopstatus {
      all st:State| st.setbrowsingcontext =0 |
      st/nexts.seteventlope = 0  

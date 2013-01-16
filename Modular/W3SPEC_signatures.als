@@ -233,6 +233,13 @@ enum Task {
                      DomElements // similar to element, how to combine two sigs?
 }
 
+sig State { 
+      setdocwrite: one Bool, 
+      setdomcontentloaded: one Bool,                            
+      seteventlope: one Bool,
+      setbrowsingcontext: one Bool
+}
+
 sig EventLoop {
                taskqueues : lone TaskQueue
                unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext//at most one browsingcontext for one eventloop
