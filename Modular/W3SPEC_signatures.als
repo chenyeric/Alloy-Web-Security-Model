@@ -114,6 +114,7 @@ sig Element{
 	cause: lone DomManipulationEvent, // how is this element created?
 	host: lone Document,
 	tag: HTMLtag   //this element MUST exist for every element
+
 } 
 
 sig HTMLElement extends Element{
@@ -158,7 +159,10 @@ sig ScriptElement extends Element{
 	script: ScriptObject,
 	async: one Bool,
 	defer: one Bool,
-	src: lone string
+	src: lone string,
+//add parserinserted flag yuan
+     parserinserted: one Bool,
+     forceasync : one Bool
 }{
 	tag = script
 }
@@ -248,5 +252,38 @@ sig EventLoop {
 }
 sig TaskQueue{
           taskseq :  seq Task  // squence of taskqueues, can be   Events, Callbacks, Parsing etc.                     
+}
+
+//listofscripts
+sig listscriptexecutefinishparse{
+    list : seq ScriptElement
+}
+
+sig listscriptpendingparseblock{
+    list : seq ScriptElement
+}
+
+sig listscriptinorder{
+    list : seq ScriptElement
+
+}
+
+sig listscriptsoon{
+    list : seq ScriptElement
+
+}
+
+//Set up ordered status
+open util/ordering[State] as State
+open util/ordering[State] as EventState
+sig State { 
+      setdocwrite: one Bool, 
+      setdoncontentloaded: one Bool,                            
+      seteventlope: one Bool,
+      setbrowsingcontext: one Bool
+}
+
+sig EventSate {
+   eventloop : one EventLoop
 }
 
