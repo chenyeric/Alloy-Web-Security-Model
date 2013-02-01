@@ -280,13 +280,14 @@ sig listscriptsoon{
 //Set up ordered status
 open util/ordering[State] as State
 open util/ordering[eventloop] as EventState
+/*
 sig State { 
       setdocwrite: one Bool, 
       setdoncontentloaded: one Bool,                            
       seteventlope: one Bool,
       setbrowsingcontext: one Bool
 }
-
+*/
 sig EventSate {
    eventloop : one EventLoop
 }

@@ -1,6 +1,8 @@
 open W3SPEC_signatures
+/*
 open util/ordering[State] as State
 open util/ordering[State] as EventState
+*/
 
 //===================================PAGE LOADER ===================/
 //you can either have a parent context or an opener context, but not both
@@ -455,13 +457,14 @@ fact dominatrixss{
 
 >>>>>>> origin/master
 
-
+/*
 fact stateinti{
      State/first.setdocwrite=0 && 
      State/first.setdomcontentloaded =0&&
      State/first.setbrowsingcontext =1 && 
      State/first.seteventlope =1    
 }
+*/
 
 //doc.write has to be called before the domcontentloaded event
 
@@ -507,7 +510,7 @@ pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
           s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
   }
 }
-
+/*
 //8.2.6 the end
 //Once the user agent stops parsing the document, the user agent //must run the following steps
 
@@ -521,6 +524,7 @@ run RunEvent {s.isEmpty = 1}
 
 //4. Queue a task to fire a simple event that bubbles named DOMContentLoaded at the Document.
 // run script in listscriptassoon
+*/
 
 //4.3 scripting
 //If the element has a src attribute, and the element has a defer //attribute, and the element has been flagged as "parser-  //inserted", and the element does not have an async attribute, //add it to listscriptexecutefinishparse
