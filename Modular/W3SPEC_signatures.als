@@ -240,12 +240,7 @@ enum Task {
                      Element // similar to element, how to combine two sigs?
 }
 
-sig State { 
-      setdocwrite: one Bool, 
-      setdomcontentloaded: one Bool,                            
-      seteventlope: one Bool,
-      setbrowsingcontext: one Bool
-}
+
 
 sig EventLoop {
                taskqueues : lone TaskQueue
@@ -278,7 +273,7 @@ sig listscriptsoon{
 }
 
 //Set up ordered status
-open util/ordering[State] as State
+//open util/ordering[State] as State
 open util/ordering[eventloop] as EventState
 /*
 sig State { 

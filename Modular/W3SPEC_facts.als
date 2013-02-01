@@ -451,11 +451,6 @@ fact dominatrixss{
 
 
 //6.1 eventloop
-<<<<<<< HEAD
-=======
-//Set up ordered status
-
->>>>>>> origin/master
 
 /*
 fact stateinti{
@@ -469,8 +464,10 @@ fact stateinti{
 //doc.write has to be called before the domcontentloaded event
 
 fact domcontentstatus {
-     all st: eventloop| st.Element.cause.method = document_write  =>
-     some st/nexts.domcontentloaded = 1
+     all st: eventloop|{
+		 st.Element.cause.method = document_write  =>
+     	some st/nexts.domcontentloaded = 1
+	}
 }
 
 pred eventloopinit{
@@ -478,15 +475,17 @@ pred eventloopinit{
 }
 
 
-//If an†event loop's†browsing contexts†all go away, then the†event loop†goes away as well. A†browsing context†always has an†event loop†coordinating its activities
+//If an event loop's browsing contexts all go away, then the event loop goes away as well. 
+//A browsing context always has an event loop coordinating its activities
 fact eventloopstatus {
-     all st:eventloop| no st.setbrowsingcontext |
-     no st/next
-
+     all st:eventloop| {
+		no st.setbrowsingcontext =>
+    	no st/next
+	}
 }
 
 pred eventstatetransfer {
-      all s: eventloop, s': s.next {
+   all s: eventloop, s': s.next {
 //      RunEvent [s.eventloop, s'.eventloop]
      run RunEvent {s.first!=null&&s.first.readyparserexecute = 1}
      run RunEvent {s.isEmpty = 1}
@@ -497,7 +496,7 @@ pred eventstatetransfer {
 //fire domcontentloaed event
 
 fact domcontentloaded {
-     all s: eventloop {
+     all s: eventloop, s':s.next {
          run eventstatetransfer
          s.domcontentloaded = 1
    }
@@ -506,9 +505,7 @@ fact domcontentloaded {
 
 // Running the eventloop till meet the condition 
 pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
-         one x: s.eventloop | {
-          s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
-  }
+       s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
 }
 /*
 //8.2.6 the end
