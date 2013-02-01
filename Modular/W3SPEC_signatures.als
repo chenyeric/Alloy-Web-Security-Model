@@ -114,6 +114,8 @@ sig Element{
 	cause: lone DomManipulationEvent, // how is this element created?
 	host: lone Document,
 	tag: HTMLtag   //this element MUST exist for every element
+//yuan:add flag for executed or not?
+     executed: one Bool
 
 } 
 
@@ -162,7 +164,8 @@ sig ScriptElement extends Element{
 	src: lone string,
 //add parserinserted flag yuan
      parserinserted: one Bool,
-     forceasync : one Bool
+     forceasync : one Bool,
+     executed : one Bool
 }{
 	tag = script
 }
@@ -230,11 +233,11 @@ sig postMessageEvent extends DomEvent{
 
 //6.1 eventloop
 enum Task {
-                     Events,
-                     Callbacks,
+                     Event,
+                     Callback,
                      Parsing,
-                     Resources,
-                     DomElements // similar to element, how to combine two sigs?
+                     Resource,
+                     Element // similar to element, how to combine two sigs?
 }
 
 sig State { 
@@ -248,6 +251,7 @@ sig EventLoop {
                taskqueues : lone TaskQueue
                unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext//at most one browsingcontext for one eventloop
 	          browseringcontexts: some unitOfRelatedSimilarOriginBrowsingContext.browsingContexts //An event loop always has at least one browsing context.
+               domcontentloaded : one bool
 
 }
 sig TaskQueue{
@@ -275,7 +279,7 @@ sig listscriptsoon{
 
 //Set up ordered status
 open util/ordering[State] as State
-open util/ordering[State] as EventState
+open util/ordering[eventloop] as EventState
 sig State { 
       setdocwrite: one Bool, 
       setdoncontentloaded: one Bool,                            

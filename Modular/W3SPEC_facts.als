@@ -464,21 +464,41 @@ fact stateinti{
 }
 
 //doc.write has to be called before the domcontentloaded event
+
 fact domcontentstatus {
-     all st: State| st.setdomcontentloade=1 |
-     st/prevs.setdocwrite= 1 
+     all st: eventloop| st.Element.cause.method = document_write  =>
+     some st/nexts.domcontentloaded = 1
 }
+
+pred eventloopinit{
+    EventState/first.domcontentloaded = 0
+}
+
 
 //If an†event loop's†browsing contexts†all go away, then the†event loop†goes away as well. A†browsing context†always has an†event loop†coordinating its activities
 fact eventloopstatus {
-     all st:State| st.setbrowsingcontext =0 |
-     st/nexts.seteventlope = 0  
+     all st:eventloop| no st.setbrowsingcontext |
+     no st/next
+
 }
 
-fact eventstatetransfer {
-      all s: EventSate, s': s.next {
-      RunEvent [s.eventloop, s'.eventloop]
+pred eventstatetransfer {
+      all s: eventloop, s': s.next {
+//      RunEvent [s.eventloop, s'.eventloop]
+     run RunEvent {s.first!=null&&s.first.readyparserexecute = 1}
+     run RunEvent {s.isEmpty = 1}
+
   }
+}
+
+//fire domcontentloaed event
+
+fact domcontentloaded {
+     all s: eventloop {
+         run eventstatetransfer
+         s.domcontentloaded = 1
+   }
+     
 }
 
 // Running the eventloop till meet the condition 

@@ -106,8 +106,16 @@ check atLeastOneBrowsingContextPerEventLoop{
 check DominatrixssBlocksDynamicScripts{
 	no dme:DomManipulationEvent|{ // no DOM node can be created where,
 		dme.newElement in ScriptElement // the DOM node is a script node
-		
+		dme.method = appendChild ||dme.method = insertBefore  ||dme.method = replaceChild  ||dme.method = document_write  ||dme.method = javascriptUrl
 		// TODO: the DOM node is NOT created through one of the legitimate ways
 		// i.e., the DOM node is not added through the whitelisted dom manipulation apis (appendChild, etc.)
 	}
 }for 10
+
+
+//no malicious scripts will be excuted before Domcontentloaded
+check Scriptbfparse{
+   no ev : eventloop{
+      ev.domcontentloaded = 0 | some ev/nexts.taskques.elems.element.executed = 1
+     }
+} for 10
