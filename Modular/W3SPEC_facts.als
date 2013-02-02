@@ -485,21 +485,22 @@ fact eventloopstatus {
 }
 
 pred eventstatetransfer {
-   all s: eventloop, s': s.next {
-//      RunEvent [s.eventloop, s'.eventloop]
-     run RunEvent {s.first!=null&&s.first.readyparserexecute = 1}
-     run RunEvent {s.isEmpty = 1}
+      all s: eventloop, s': s.next {
+      !(s.first!=null&&s.first.readyparserexecute = 1) =>           RunEvent [s.eventloop, s'.eventloop]
+      s.isEmpty ! = 1 =>
+RunEvent [s.eventloop, s'.eventloop]
+ 
 
   }
 }
 
+
 //fire domcontentloaed event
 
 fact domcontentloaded {
-     all s: eventloop, s':s.next {
-         run eventstatetransfer
+         eventstatetransfer
          s.domcontentloaded = 1
-   }
+   
      
 }
 
