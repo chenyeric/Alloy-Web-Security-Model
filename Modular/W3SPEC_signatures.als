@@ -3,7 +3,8 @@ open DNSAndOrigin
 
 
 enum Bool { TRUE, FALSE} //hack to get boolean
-enum HTMLtag {html,body, head, iframe, script} 
+//Yuan add meta tag
+enum HTMLtag {html,body, head, iframe, script, meta} 
 sig string{} //used in things like browsing context name
 
 
@@ -94,6 +95,8 @@ sig Document {
 
 	html: HTMLElement,
 	elements: set Element,
+     //Yuan add metaelement 
+     meta: METAElement
 }
 
 //The origin of about_blank
@@ -106,16 +109,19 @@ fact originOfAboutBlank{
 }*/
 
 enum CHARACTEREncoding{UTF8}
-enum URLType{NORM, ABOUT_BLANK, DATA}
+//Yuan add javascripturl
+enum URLType{NORM, ABOUT_BLANK, DATA, JAVASCRIPT}
 enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 
 //html element
 sig Element{
 	cause: lone DomManipulationEvent, // how is this element created?
 	host: lone Document,
-	tag: HTMLtag   //this element MUST exist for every element
+	tag: HTMLtag ,  //this element MUST exist for every element
 //yuan:add flag for executed or not?
-     executed: one Bool
+ //    executed: Bool,
+//Yuan add elemen child
+     child: Element
 
 } 
 
@@ -124,6 +130,13 @@ sig HTMLElement extends Element{
 	body: BODYElement,
 }{
 	tag = html
+}
+//Yuan add meta element
+sig METAElement extends Element{
+     url : one URLType,
+	refresh: Bool
+}{
+	tag = meta
 }
 
 sig HEADElement extends Element{}{
@@ -181,7 +194,9 @@ sig ScriptObject{
 	func_self: BrowsingContext,
 	func_blank: lone BrowsingContext,
 	func_parent: BrowsingContext,
-	func_top: BrowsingContext
+	func_top: BrowsingContext,
+     //Yuan add label for executed
+     executed : Bool
 } 
 
 // 6.1.4 Event loops - http://www.w3.org/html/wg/drafts/html/master/webappapis.html#event-loop
@@ -208,7 +223,10 @@ enum domManipulationAPI{
 
 	//6.1.5 javascript: url scheme
 	//http://www.w3.org/html/wg/drafts/html/master/webappapis.html#javascript-protocol
-	javascriptUrl
+	javascriptUrl,
+     //Yuan innerhtml
+     innerhtml
+ 
 }
 
 sig DomManipulationEvent extends DomEvent{
@@ -237,21 +255,27 @@ enum Task {
                      Callback,
                      Parsing,
                      Resource,
-                     Element // similar to element, how to combine two sigs?
+                     TaskElement // similar to element, how to combine two sigs?
 }
 
-
-
+sig State { 
+      setdocwrite: one Bool, 
+      setdomcontentloaded: one Bool,                            
+      seteventlope: one Bool,
+      setbrowsingcontext: one Bool
+}
+/*
 sig EventLoop {
-               taskqueues : lone TaskQueue
-               unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext//at most one browsingcontext for one eventloop
-	          browseringcontexts: some unitOfRelatedSimilarOriginBrowsingContext.browsingContexts //An event loop always has at least one browsing context.
+               taskqueues : lone TaskQueue,
+               unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext,//at most one browsingcontext for one eventloop
+	          browseringcontexts: some unitOfRelatedSimilarOriginBrowsingContext.browsingContexts, //An event loop always has at least one browsing context.
                domcontentloaded : one bool
 
 }
 sig TaskQueue{
           taskseq :  seq Task  // squence of taskqueues, can be   Events, Callbacks, Parsing etc.                     
 }
+*/
 
 //listofscripts
 sig listscriptexecutefinishparse{
@@ -272,8 +296,8 @@ sig listscriptsoon{
 
 }
 
-//Set up ordered status
-//open util/ordering[State] as State
+/*//Set up ordered status
+open util/ordering[State] as State
 open util/ordering[eventloop] as EventState
 /*
 sig State { 
@@ -283,7 +307,8 @@ sig State {
       setbrowsingcontext: one Bool
 }
 */
+/*
 sig EventSate {
    eventloop : one EventLoop
 }
-
+*/
