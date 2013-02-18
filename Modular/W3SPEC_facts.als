@@ -508,3 +508,112 @@ fact Innerhtml{
 }
 
 
+//6.1 eventloop
+<<<<<<< HEAD
+=======
+//Set up ordered status
+
+>>>>>>> origin/master
+
+/*
+fact stateinti{
+     State/first.setdocwrite=0 && 
+     State/first.setdomcontentloaded =0&&
+     State/first.setbrowsingcontext =1 && 
+     State/first.seteventlope =1    
+}
+*/
+
+//doc.write has to be called before the domcontentloaded event
+
+fact domcontentstatus {
+     all st: eventloop| st.Element.cause.method = document_write  =>
+     some st/nexts.domcontentloaded = 1
+}
+
+pred eventloopinit{
+    EventState/first.domcontentloaded = 0
+}
+
+
+//If an†event loop's†browsing contexts†all go away, then the†event loop†goes away as well. A†browsing context†always has an†event loop†coordinating its activities
+fact eventloopstatus {
+     all st:eventloop| no st.setbrowsingcontext |
+     no st/next
+
+}
+
+pred eventstatetransfer {
+      all s: eventloop, s': s.next {
+      !(s.first!=null&&s.first.readyparserexecute = 1) =>           RunEvent [s.eventloop, s'.eventloop]
+      s.isEmpty ! = 1 =>
+RunEvent [s.eventloop, s'.eventloop]
+ 
+
+  }
+}
+
+//fire domcontentloaed event
+
+fact domcontentloaded {
+     all s: eventloop {
+         eventstatetransfer
+         s.domcontentloaded = 1
+   }
+     
+}
+
+// Running the eventloop till meet the condition 
+pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
+        
+          s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
+  
+}
+/*
+//8.2.6 the end
+//Once the user agent stops parsing the document, the user agent //must run the following steps
+
+//Spin the event loop until the first script in the list of //scripts that will execute when the document has finished //parsing has its "ready to be parser-executed" flag set 
+ 
+run RunEvent {s.first!=null&&s.first.readyparserexecute = 1}
+
+//If the list of scripts that will execute when the document has //finished parsing is still not empty, repeat these substeps //again from substep 1.
+
+run RunEvent {s.isEmpty = 1}
+
+//4. Queue a task to fire a simple event that bubbles named DOMContentLoaded at the Document.
+// run script in listscriptassoon
+*/
+
+//4.3 scripting
+//If the element has a src attribute, and the element has a defer //attribute, and the element has been flagged as "parser-  //inserted", and the element does not have an async attribute, //add it to listscriptexecutefinishparse
+
+fact scriptattribute {
+
+   selement : ScriptElement,s1: one listscriptexecutefinishparse,s2:one listscriptpendingparseblock, s3:listscriptinorder, s4:listscriptsoon{
+
+              selement.src != null && selement.defer = 1 && selement.parserinserted = 1 && selement.async != 1  => 
+              s1.add[selement]
+
+//If the element has a src attribute, and the element has been //flagged as "parser-inserted", and the element does not have an //async attributeThe element is the pending parsing-blocking //script of the Document of the parser that created the element. //(There can only be one such script per Document at a time.)
+
+              else selement.src != null && selement.parserinserted = 1 && selement.async != 1  => 
+              s2.add[selement]
+
+//Yuan: not sure if we need this? If the element does not have a //src attribute, and the element has been flagged as //"parser-/inserted", and either the parser that created the //script is an XML parser or it's an HTML parser whose script //nesting level is not greater than one, and the Document of the //HTML parser or XML parser that created the scriptelement has a //style sheet that is blocking scriptsThe element is the pending //parsing-blocking script of the Document of the parser that //created the element. (There can only be one such script per //Document at a time.)
+
+
+//If the element has a src attribute, does not have an async //attribute, and does not have the "force-async" flag setThe //element must be added to the end of the list of scripts that //will execute in order as soon as possible associated with the //Document of the script element at the time the prepare a script //algorithm started.
+              else selement.src != null && element.async = 0 && element.forceasync = 0 =>
+              s3.add[selement]
+
+//If the element has a src attributeThe element must be added to //the set of scripts that will execute as soon as possible of the //Document of the script element at the time the prepare a //scriptalgorithm started.
+              else selement.src != null =>
+              s4.add[selement]
+
+
+
+}
+}
+
+

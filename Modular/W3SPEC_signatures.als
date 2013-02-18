@@ -291,7 +291,7 @@ sig listscriptsoon{
 
 }
 
-/*//Set up ordered status
+//Set up ordered status
 open util/ordering[State] as State
 open util/ordering[eventloop] as EventState
 /*
@@ -302,8 +302,8 @@ sig State {
       setbrowsingcontext: one Bool
 }
 */
-/*
+
 sig EventSate {
    eventloop : one EventLoop
 }
-*/
+
