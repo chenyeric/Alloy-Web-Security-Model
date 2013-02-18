@@ -245,6 +245,12 @@ fact elements_in_document_are_reachable{
 	}
 }
 
+fact parent_and_child_relationship_for_elements{
+	all ele:Element, doc:Document|{
+		ele in doc.elements iff doc = ele.host
+	}
+}
+
 
 //the sandbox policies for a frame should be the most strict policy after combining its parents policy
 fun most_strict_sandbox_policy[frm:IframeElement]:set iframe_sandbox_policy{
@@ -458,24 +464,7 @@ fact postMessage{
 
 //====================== Unorganized stuff =======================/
 //TODO: organize
-fact JavaScriptURLNavigation{
-	all nav:NavigationEvent|{
-		// if a navigation event happens with a JavaScript URL
-		JAVASCRIPT = nav.origin.schema implies {
-	
-			some script:ScriptObject|{
-				//FIXME: the code below is not correct, what we really want to say is the following:
-				//          the oldDoc is the as the newDoc except one new  Javascript event is added to the event loop
 
-				nav.oldDoc.origin = nav.newDoc.origin
-				(nav.oldDoc.elements + script.element) = nav.newDoc.elements
-
-				//TODO: we must say something about the content of the script, which is not currently modeled
-
-			}
-		}
-	}
-}	
 
 fact MetaRefreshMustHaveAnOrigin{
 	all meta:METAElement|{
@@ -530,11 +519,15 @@ fact document_write_only_adds_new_node{
 pred ParserStep[doc, doc': Document, q, q': TokenQueue]{
 	q' = q.delete[0]
 	doc'.elements = doc.elements+q.first.*child
+	//TODO: we also need to say doc' = doc is the same for everything else
 }
 
 pred InnerHTML[doc, doc':Document, ele, ele':Element, q, q':TokenQueue]{
-	doc.host.elements - ele.^child + ele'.*child = doc'.host.elements
+	ele.host.elements - ele.^child + ele'.*child = ele'.host.elements
+	ele in doc.elements
+	ele' in doc'.elements
 	q = q'
+	//TODO: we also need to say doc' = doc is the same for everything else
 }
 
 pred Document_write[doc,doc':Document, ele':Element, q,q':TokenQueue]{
@@ -543,9 +536,40 @@ pred Document_write[doc,doc':Document, ele':Element, q,q':TokenQueue]{
 	q' = q.insert[0,ele']
 }
 
+pred NavigationToJsUrl[doc,doc':Document, script:ScriptObject, q,q':TokenQueue]{
+	doc=doc'
+	q'.eleSeq = q.eleSqe + script.element
+}
+
 //parser core
 fact parser_core{
 	all s: ParserState, s': s.next|{
+	
+		//you can only transfer from 1 state to the next by using the following means
+		ParserStep[s.document,s'document, s.tokenQueue, s'.tokenQueue] or
+		some ele,ele':Element|{
+			InnerHTML[s.document, s'.document, ele, ele', s.tokenQueue, s'.tokenQueue]
+		} or 
+		some ele:Element|{
+			Document_write[s.document, s'.document, ele, s.tokenQueue, s'.tokenQueue]
+		} or 
+		some script:ScriptObject|{
+			NavigationToJsUrl[s.document, s'.document, script, s.tokenQueue, s'.tokenQueue]
+		}
+
+		all nav:NavigationEvent|{
+			// if a navigation event happens with a JavaScript URL
+			JAVASCRIPT = nav.origin.schema implies {
+	
+				some script:ScriptObject|{
+					nav.oldDoc = s.document
+					NavigationToJsUrl[s.document, s'.document, script, s.tokenQueue, s'.tokenQueue]
+					
+					//TODO: we must say something about the content of the script, which is not currently modeled
+
+				}
+			}
+		}
 	
 		all domManip: DomManipulationEvent|{
 			// if the next script in queue uses innerHTML
