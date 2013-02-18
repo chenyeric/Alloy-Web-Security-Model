@@ -228,6 +228,23 @@ fact originOfSimilarBrowsingContext{
 
 
 //====================================HTML ELEMENTS================/
+fact element_children_in_same_document{
+	all ele, ele':Element, doc: Document|{
+		{
+			ele' = ele.*child
+			ele in doc.elements
+		}iff{
+			ele' in doc.elements
+		}
+	}
+}
+
+fact elements_in_document_are_reachable{
+	all element: Element, doc: Document|{
+		element in doc.elements => element in doc.html.*child
+	}
+}
+
 
 //the sandbox policies for a frame should be the most strict policy after combining its parents policy
 fun most_strict_sandbox_policy[frm:IframeElement]:set iframe_sandbox_policy{
@@ -343,7 +360,7 @@ fact domManipulationEvent_definition{
 		}
 	}
 }
-
+/*
 //Only the most recent element is connected with the DOM
 fact domManipulationEvent_MostRecentElementConnectedWithDom{
 	all ele:Element|{
@@ -360,6 +377,7 @@ fact domManipulationEvent_DOMChangeOnlyOccurOnSameTag{
 			dme.oldElement.tag = dme.newElement.tag
 	}
 }
+*/
 
 //=================5.1.6 browsing context keywords
 //	func_form_target: BrowsingContext,
@@ -484,45 +502,77 @@ fact Metarefresh_navigation{
          }   
 }
 
-
-
 /*
-fact ffake{
-  all el : Element |{ 
-      el.cause.method = innerhtml =>
-
-  one ne: NavigationEvent {
-    ne.script.executed = TRUE     
-  }
-       }
-}
-*/
-/*for innerhtmlif the method == innerhtml, then oldelment.child==newelement.child childchain cannot have script element inside for innerhtml method  tag=script*/
-
-fact Innerhtml{
+fact NoScriptExecutionForInnerhtml{
       all el: Element|{
       	el.cause.method = innerhtml implies{
                all cl: el.*child | cl != ScriptElement
          }
       }
 }
-
+*/
 
 //6.1 eventloop
-<<<<<<< HEAD
-=======
-//Set up ordered status
 
->>>>>>> origin/master
+//initial state
+fact ParserStarts{
+	no first.document
+	some first.tokenQueue.eleSeq
+}
+
+fact document_write_only_adds_new_node{
+	all dme: DomManipulationEvent|{
+		dme.method = document.write => 
+		no dme.oldElement
+	}
+}
+
+pred ParserStep[doc, doc': Document, q, q': TokenQueue]{
+	q' = q.delete[0]
+	doc'.elements = doc.elements+q.first.*child
+}
+
+pred InnerHTML[doc, doc':Document, ele, ele':Element, q, q':TokenQueue]{
+	doc.host.elements - ele.^child + ele'.*child = doc'.host.elements
+	q = q'
+}
+
+pred Document_write[doc,doc':Document, ele':Element, q,q':TokenQueue]{
+	doc = doc'
+	q = q'
+	q' = q.insert[0,ele']
+}
+
+//parser core
+fact parser_core{
+	all s: ParserState, s': s.next|{
+	
+		all domManip: DomManipulationEvent|{
+			// if the next script in queue uses innerHTML
+			{
+				domManip.method = innerhtml
+				domManip.script = s.tokenQueue.eleSeq.first.script
+
+				//and if he element it's trying to modify is in our document
+				domManip.oldElement in s.document.elements
+			}implies{
+				InnerHTML[s.document, s'.document, domManip.oldElement, domManip,newElement, s.tokenQueue, s'.tokenQueue]
+			}
+			
+			//if the next script in queue uses document.write
+			{
+				domManip.method = document_write
+				domManip.script = s.tokenQueue.eleSeq.first.script
+			}implies{
+				Document_write[s.document, s'.document, domManip,newElement, s.tokenQueue, s'.tokenQueue]
+			}else{
+				ParserStep[s.document, s'.document, domManip, s.tokenQueue, s'.tokenQueue]
+			}
+		}
+	}
+}
 
 /*
-fact stateinti{
-     State/first.setdocwrite=0 && 
-     State/first.setdomcontentloaded =0&&
-     State/first.setbrowsingcontext =1 && 
-     State/first.seteventlope =1    
-}
-*/
 
 //doc.write has to be called before the domcontentloaded event
 
@@ -545,12 +595,9 @@ fact eventloopstatus {
 
 pred eventstatetransfer {
       all s: eventloop, s': s.next {
-      !(s.first!=null&&s.first.readyparserexecute = 1) =>           RunEvent [s.eventloop, s'.eventloop]
-      s.isEmpty ! = 1 =>
-RunEvent [s.eventloop, s'.eventloop]
- 
-
-  }
+      	!(s.first!=null&&s.first.readyparserexecute = 1) =>   RunEvent [s.eventloop, s'.eventloop]
+      	s.isEmpty ! = 1 =>RunEvent [s.eventloop, s'.eventloop]å
+ 	  }
 }
 
 //fire domcontentloaed event
@@ -569,28 +616,15 @@ pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
           s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
   
 }
-/*
-//8.2.6 the end
-//Once the user agent stops parsing the document, the user agent //must run the following steps
 
-//Spin the event loop until the first script in the list of //scripts that will execute when the document has finished //parsing has its "ready to be parser-executed" flag set 
- 
-run RunEvent {s.first!=null&&s.first.readyparserexecute = 1}
-
-//If the list of scripts that will execute when the document has //finished parsing is still not empty, repeat these substeps //again from substep 1.
-
-run RunEvent {s.isEmpty = 1}
-
-//4. Queue a task to fire a simple event that bubbles named DOMContentLoaded at the Document.
-// run script in listscriptassoon
-*/
 
 //4.3 scripting
 //If the element has a src attribute, and the element has a defer //attribute, and the element has been flagged as "parser-  //inserted", and the element does not have an async attribute, //add it to listscriptexecutefinishparse
 
 fact scriptattribute {
 
-   selement : ScriptElement,s1: one listscriptexecutefinishparse,s2:one listscriptpendingparseblock, s3:listscriptinorder, s4:listscriptsoon{
+   selement : ScriptElement,s1: one listscriptexecutefinishparse,s2:one listscriptpendingparseblock, s3:listscriptinorder, 
+								s4:listscriptsoon{
 
               selement.src != null && selement.defer = 1 && selement.parserinserted = 1 && selement.async != 1  => 
               s1.add[selement]
@@ -613,7 +647,7 @@ fact scriptattribute {
 
 
 
-}
+	}
 }
 
-
+*/

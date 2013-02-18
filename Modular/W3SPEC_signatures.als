@@ -1,3 +1,5 @@
+//Set up ordered status
+open util/ordering[ParsingState]
 open DNSAndOrigin
 //open basicDeclarations
 
@@ -245,6 +247,18 @@ sig postMessageEvent extends DomEvent{
 }
 
 //6.1 eventloop
+// Instead of modeling the tokenizer, we are using a queue of tokens emitted by the tokenizer
+sig TokenQueue{
+	eleSeq: seq Element,
+}
+
+sig ParserState{
+	tokenQueue: TokenQueue,
+	document: Document
+}
+
+
+/*
 enum Task {
                      Event,
                      Callback,
@@ -259,7 +273,7 @@ sig State {
       seteventlope: one Bool,
       setbrowsingcontext: one Bool
 }
-/*
+
 sig EventLoop {
                taskqueues : lone TaskQueue,
                unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext,//at most one browsingcontext for one eventloop
@@ -270,7 +284,7 @@ sig EventLoop {
 sig TaskQueue{
           taskseq :  seq Task  // squence of taskqueues, can be   Events, Callbacks, Parsing etc.                     
 }
-*/
+
 
 //listofscripts
 sig listscriptexecutefinishparse{
@@ -290,20 +304,4 @@ sig listscriptsoon{
     list : seq ScriptElement
 
 }
-
-//Set up ordered status
-open util/ordering[State] as State
-open util/ordering[eventloop] as EventState
-/*
-sig State { 
-      setdocwrite: one Bool, 
-      setdoncontentloaded: one Bool,                            
-      seteventlope: one Bool,
-      setbrowsingcontext: one Bool
-}
 */
-
-sig EventSate {
-   eventloop : one EventLoop
-}
-
