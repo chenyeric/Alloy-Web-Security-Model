@@ -88,15 +88,13 @@ sig Document {
 
 	charset: one CHARACTEREncoding,
 	type: one MIMEType,
-	url: one URLType,
 	location: Location,
 	origin: one Origin,
 	effectiveScriptOrigin: one Origin,	
 
 	html: HTMLElement,
 	elements: set Element,
-     //Yuan add metaelement 
-     meta: METAElement
+    
 }
 
 //The origin of about_blank
@@ -109,8 +107,6 @@ fact originOfAboutBlank{
 }*/
 
 enum CHARACTEREncoding{UTF8}
-//Yuan add javascripturl
-enum URLType{NORM, ABOUT_BLANK, DATA, JAVASCRIPT}
 enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
 
 //html element
@@ -132,9 +128,10 @@ sig HTMLElement extends Element{
 	tag = html
 }
 //Yuan add meta element
+enum HTTPEquivTypes{REFRESH}
 sig METAElement extends Element{
-     url : one URLType,
-	refresh: Bool
+     origin : lone Origin,
+	 http_equiv: one HTTPEquivTypes
 }{
 	tag = meta
 }
@@ -221,9 +218,6 @@ enum domManipulationAPI{
 	//http://www.w3.org/TR/html5/dom.html#dynamic-markup-insertion
 	document_write,
 
-	//6.1.5 javascript: url scheme
-	//http://www.w3.org/html/wg/drafts/html/master/webappapis.html#javascript-protocol
-	javascriptUrl,
      //Yuan innerhtml
      innerhtml
  
@@ -239,6 +233,7 @@ sig DomManipulationEvent extends DomEvent{
 sig NavigationEvent extends DomEvent{
 	oldDoc: Document,
 	newDoc: Document,
+	origin: Origin, //the url this event is trying to navigate to.
 	script: lone ScriptObject
 }
 

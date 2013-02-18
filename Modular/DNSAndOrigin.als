@@ -59,4 +59,4 @@ fact DistinctOrigins {
 
 
 //enum Port{P80,P8080}
-enum Schema{HTTP,HTTPS, DATA}
+enum Schema{HTTP,HTTPS, DATA, JAVASCRIPT}

@@ -438,29 +438,54 @@ fact postMessage{
 	}
 }
 
+//====================== Unorganized stuff =======================/
+//TODO: organize
+fact JavaScriptURLNavigation{
+	all nav:NavigationEvent|{
+		// if a navigation event happens with a JavaScript URL
+		JAVASCRIPT = nav.origin.schema implies {
+	
+			some script:ScriptObject|{
+				//FIXME: the code below is not correct, what we really want to say is the following:
+				//          the oldDoc is the as the newDoc except one new  Javascript event is added to the event loop
 
+				nav.oldDoc.origin = nav.newDoc.origin
+				(nav.oldDoc.elements + script.element) = nav.newDoc.elements
 
+				//TODO: we must say something about the content of the script, which is not currently modeled
 
-/*Yuan when refresh attribute in meta, there should be a navigation event where the olddoc=document meta tag belong toif the refresh happen with javascript, the page url is not changed and the script will be executed*/
+			}
+		}
+	}
+}	
 
-fact Metarefresh_navigation{
-         all do:Document|{
-             do.meta.refresh = TRUE =>
-                   {
-                       one ne: NavigationEvent {
-                          ne.oldDoc=Document
-             																																																																																																																																																
-                          do.meta.cause.method = innerhtml and do.meta.url = JAVASCRIPT =>
-                             {
-                                ne.script.executed = TRUE
-                                
-                             }
-                       }
-                   }
-                  
-         }   
-
+fact MetaRefreshMustHaveAnOrigin{
+	all meta:METAElement|{
+		REFRESH = meta.http_equiv implies some meta.origin
+	}
 }
+
+//navigation using meta refresh
+fact Metarefresh_navigation{
+		//given any doc and meta
+         all doc:Document, meta:METAElement|{
+			{
+				//if the meta element is in the doc
+				meta in doc.elements
+				//and it has refresh http_equiv attribute
+				REFRESH = meta.http_equiv
+			}implies{
+				//then there must exist a corresponding navigation event
+				some navEvent:NavigationEvent|{
+					navEvent.origin = meta.origin
+					navEvent.oldDoc = doc
+				}
+			}
+         }   
+}
+
+
+
 /*
 fact ffake{
   all el : Element |{ 
@@ -476,14 +501,10 @@ fact ffake{
 
 fact Innerhtml{
       all el: Element|{
-      
-      Element.cause.method = innerhtml =>
-             {
-               all cl: el.^child | cl != ScriptElement
-             }
+      	el.cause.method = innerhtml implies{
+               all cl: el.*child | cl != ScriptElement
+         }
       }
-
-
 }
 
 

@@ -95,6 +95,23 @@ check postMessageConfidentiality{
 }for 6
 
 
+check MetaRefreshesAreSane{
+
+	all doc:Document, meta:METAElement|{
+		{
+			meta in doc.elements
+			REFRESH = meta.http_equiv
+		}implies{
+			some nav:NavigationEvent|{
+				nav.origin = meta.origin
+				nav.oldDoc = doc
+			}
+		}
+	}
+
+}for 10
+
+/*
 
 //Check for script execution in the case of innerhtml
 check Innerhtmlnoscript{
@@ -122,4 +139,4 @@ check Innerhtmlnoscript2{
 
 } for 6
 
-
+*/
