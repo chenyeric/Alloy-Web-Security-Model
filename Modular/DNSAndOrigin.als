@@ -45,9 +45,9 @@ sig NetworkEndpoint{}
 sig Origin {
 //	port: Port, 
 	schema: Schema,
-	dnslabel : DNS,
+//	dnslabel : DNS,
 }
-
+/*
 fact DistinctOrigins {
   no disj o1, o2: Origin | {
      //o1.port = o2.port
@@ -55,7 +55,7 @@ fact DistinctOrigins {
      o1.dnslabel = o2.dnslabel
   }
 }
-
+*/
 
 
 //enum Port{P80,P8080}

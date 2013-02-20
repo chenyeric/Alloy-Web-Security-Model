@@ -1,5 +1,5 @@
 //Set up ordered status
-open util/ordering[ParsingState]
+open util/ordering[ParserState]
 open DNSAndOrigin
 //open basicDeclarations
 
@@ -7,9 +7,9 @@ open DNSAndOrigin
 enum Bool { TRUE, FALSE} //hack to get boolean
 //Yuan add meta tag
 enum HTMLtag {html,body, head, iframe, script, meta} 
-sig string{} //used in things like browsing context name
+//sig string{} //used in things like browsing context name
 
-
+/*
 //================================Page Loader==============================/
 sig WindowProxy extends Window{} //the window object
 sig History{
@@ -27,7 +27,7 @@ sig BrowsingContext {
 	opened: set BrowsingContext, // all the browsing contexts that was opened
 	creator: lone BrowsingContext,
 
-	name: lone string, //name of the browsing context
+	//name: lone string, //name of the browsing context
 
 	isTop: one Bool, //is this the top browsing context?
 	isFullyActive: one Bool, //is this browsing context fully active?
@@ -52,19 +52,6 @@ sig BrowsingContext {
 	//grouping browsing context
 	directlyReachable: set BrowsingContext,
 
-}{
-
- /*In general, there is a 1-to-1 mapping from the Window object 
-to the Document object. There are two exceptions. First, a Window can be reused 
-for the presentation of a second Document in the same browsing context, such that the 
-mapping is then 2-to-1. This occurs when a browsing context is navigated from the initial 
-about:blank Document to another, with replacement enabled. Second, a Document can end up 
-being reused for several Window objects when the document.open() method is used, such that the 
-mapping is then 1-to-many.
-
-A Document does not necessarily have a browsing context associated with it. In particular, 
-data mining tools are likely to never instantiate browsing contexts.
-*/
 }
 
 //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 5.1.5 Groupings of browsing contexts XXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -83,14 +70,14 @@ sig UnitOfRelatedSimilarOriginBrowsingContext{
 sig Location {
 	href: Origin,
 }
-
+*/
 sig Document {
 
-	browsingContext: one BrowsingContext, // which BC this document belongs to
+//	browsingContext: one BrowsingContext, // which BC this document belongs to
 
-	charset: one CHARACTEREncoding,
-	type: one MIMEType,
-	location: Location,
+//	charset: one CHARACTEREncoding,
+//	type: one MIMEType,
+//	location: Location,
 	origin: one Origin,
 	effectiveScriptOrigin: one Origin,	
 
@@ -107,31 +94,32 @@ fact originOfAboutBlank{
 
 	}
 }*/
-
+/*
 enum CHARACTEREncoding{UTF8}
 enum MIMEType{APPLICATION_JAVASCRIPT, APPLICATION_JSON, TEXT_HTML}
-
+*/
 //html element
 sig Element{
 	cause: lone DomManipulationEvent, // how is this element created?
-	host: lone Document,
+	host: set Document, // the set is used to represent "time"
+	hostEffectiveOrigin: Origin, //TODO: I need this to represent the "origin" of our host document
 	tag: HTMLtag ,  //this element MUST exist for every element
 //yuan:add flag for executed or not?
  //    executed: Bool,
 //Yuan add elemen child
-     child: Element
+     children: set Element
 
 } 
 
 sig HTMLElement extends Element{
 	head: HEADElement,
-	body: BODYElement,
+//	body: BODYElement,
 }{
 	tag = html
 }
 //Yuan add meta element
 enum HTTPEquivTypes{REFRESH}
-sig METAElement extends Element{
+sig MetaElement extends Element{
      origin : lone Origin,
 	 http_equiv: one HTTPEquivTypes
 }{
@@ -141,6 +129,8 @@ sig METAElement extends Element{
 sig HEADElement extends Element{}{
 	tag = head
 }
+
+/*
 
 sig BODYElement extends Element{}{
 	tag = body
@@ -161,7 +151,7 @@ enum iframe_sandbox_policy {
 	NOT_ALLOW_FORMS, 
 	NOT_ALLOW_SCRIPTS
 }
-
+*/
 //================================Dom Events==========================/
 sig DomEvent{}
 
@@ -173,7 +163,7 @@ sig ScriptElement extends Element{
 	script: ScriptObject,
 	async: one Bool,
 	defer: one Bool,
-	src: lone string,
+	//src: lone string,
 //add parserinserted flag yuan
      parserinserted: one Bool,
      forceasync : one Bool,
@@ -186,16 +176,16 @@ sig ScriptElement extends Element{
 //the actual script
 sig ScriptObject{
 	element: ScriptElement, //link scripts with their html element
-	browsingContext: BrowsingContext,
+//	browsingContext: BrowsingContext,
 	//section 5.1.6
+/*
 	func_form_target: BrowsingContext,
 	func_open: lone BrowsingContext,
 	func_self: BrowsingContext,
 	func_blank: lone BrowsingContext,
 	func_parent: BrowsingContext,
 	func_top: BrowsingContext,
-     //Yuan add label for executed
-     executed : Bool
+  */
 } 
 
 // 6.1.4 Event loops - http://www.w3.org/html/wg/drafts/html/master/webappapis.html#event-loop
@@ -212,9 +202,9 @@ sig ScriptObject{
 // methods that can be used to manipulate the dom
 enum domManipulationAPI{
 	//http://www.w3.org/TR/REC-DOM-Level-1/level-one-core.html
-	appendChild,
-	insertBefore,
-	replaceChild,
+//	appendChild,
+//	insertBefore,
+//	replaceChild,
 
 	//3.4 dynamic markup insersion
 	//http://www.w3.org/TR/html5/dom.html#dynamic-markup-insertion
@@ -238,14 +228,14 @@ sig NavigationEvent extends DomEvent{
 	origin: Origin, //the url this event is trying to navigate to.
 	script: lone ScriptObject
 }
-
+/*
 sig postMessageEvent extends DomEvent{
 	source: Window,
 	destination: Window,
 	script: ScriptObject,
 	origin: lone Origin
 }
-
+*/
 //6.1 eventloop
 // Instead of modeling the tokenizer, we are using a queue of tokens emitted by the tokenizer
 sig TokenQueue{
@@ -253,55 +243,7 @@ sig TokenQueue{
 }
 
 sig ParserState{
-	tokenQueue: TokenQueue,
-	document: Document
+	tokenQueue:  TokenQueue,
+	document:  Document
 }
 
-
-/*
-enum Task {
-                     Event,
-                     Callback,
-                     Parsing,
-                     Resource,
-                     TaskElement // similar to element, how to combine two sigs?
-}
-
-sig State { 
-      setdocwrite: one Bool, 
-      setdomcontentloaded: one Bool,                            
-      seteventlope: one Bool,
-      setbrowsingcontext: one Bool
-}
-
-sig EventLoop {
-               taskqueues : lone TaskQueue,
-               unitOfRelatedSimilarOriginBrowsingContext: lone UnitOfRelatedSimilarOriginBrowsingContext,//at most one browsingcontext for one eventloop
-	          browseringcontexts: some unitOfRelatedSimilarOriginBrowsingContext.browsingContexts, //An event loop always has at least one browsing context.
-               domcontentloaded : one bool
-
-}
-sig TaskQueue{
-          taskseq :  seq Task  // squence of taskqueues, can be   Events, Callbacks, Parsing etc.                     
-}
-
-
-//listofscripts
-sig listscriptexecutefinishparse{
-    list : seq ScriptElement
-}
-
-sig listscriptpendingparseblock{
-    list : seq ScriptElement
-}
-
-sig listscriptinorder{
-    list : seq ScriptElement
-
-}
-
-sig listscriptsoon{
-    list : seq ScriptElement
-
-}
-*/

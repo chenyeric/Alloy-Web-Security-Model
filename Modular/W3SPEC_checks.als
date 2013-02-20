@@ -1,5 +1,7 @@
 
 open W3SPEC_facts
+
+/*
 //----------------------------Page Loader CHECKS------------------------------------/
 
 //there should be no loops
@@ -111,6 +113,9 @@ check MetaRefreshesAreSane{
 
 }for 10
 
+
+//assume all DOMManipulation event are caused by innerHTML
+
 /*
 
 //Check for script execution in the case of innerhtml
@@ -138,8 +143,8 @@ check Innerhtmlnoscript2{
 
 
 } for 6
-
 */
+
 
 // ====================6.1.4 Event loops======================/
 check atLeastOneBrowsingContextPerEventLoop{
@@ -166,3 +171,4 @@ check Scriptbfparse{
       ev.domcontentloaded = 0 | some ev/nexts.taskques.elems.element.executed = 1
      }
 } for 10
+*/

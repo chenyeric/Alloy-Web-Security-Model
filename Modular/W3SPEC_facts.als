@@ -3,7 +3,7 @@ open W3SPEC_signatures
 open util/ordering[State] as State
 open util/ordering[State] as EventState
 */
-
+/*
 //===================================PAGE LOADER ===================/
 //you can either have a parent context or an opener context, but not both
 fact browsingContext_onlyOneCreator{
@@ -226,32 +226,42 @@ fact originOfSimilarBrowsingContext{
 //with child browsing contexts of elements that are in Documents that are not themselves fully active.
 
 
-
+*/
 //====================================HTML ELEMENTS================/
-fact element_children_in_same_document{
-	all ele, ele':Element, doc: Document|{
-		{
-			ele' = ele.*child
-			ele in doc.elements
-		}iff{
-			ele' in doc.elements
-		}
+
+fact elements_cannot_have_two_parents{
+	all disj parent1,parent2,ele:Element|{
+		ele in parent1.children => ele not in parent2.children
+	}
+}
+
+fact no_cycle_element_chain{
+	all ele:Element|{
+		ele not in ele.^children
 	}
 }
 
 fact elements_in_document_are_reachable{
 	all element: Element, doc: Document|{
-		element in doc.elements => element in doc.html.*child
+		element in doc.elements => element in doc.html.*children
 	}
 }
 
 fact parent_and_child_relationship_for_elements{
 	all ele:Element, doc:Document|{
-		ele in doc.elements iff doc = ele.host
+		ele in doc.elements iff doc in ele.host
 	}
 }
 
-
+//This fact is super confusing, essentially the "host" field is a set 
+// of the same document in different point in time
+fact element_can_only_belong_to_the_same_document_in_multiple_time_frame{
+	all ele:Element, doc:Document|{
+		doc in ele.host iff 
+		doc.effectiveScriptOrigin = ele.hostEffectiveOrigin
+	}
+}
+/*
 //the sandbox policies for a frame should be the most strict policy after combining its parents policy
 fun most_strict_sandbox_policy[frm:IframeElement]:set iframe_sandbox_policy{
 	frm.sandboxPolicies+frm.*(~elements.~activeDocument.contextContainer).sandboxPolicies //union of all the restrictions
@@ -331,7 +341,7 @@ run topNavigationCanHappen{
 } for 5
 
 
-
+*/
 //============================JAVASCRIPT ===========================/
 //each script tag will have a script object associated with it
 fact scriptElement_scriptObject_relationship{
@@ -345,17 +355,17 @@ fact scriptElement_scriptObject_relationship{
 //properties of a Document object are accessed by scripts whose effective 
 //script origin is not the same as the Document's effective script origin.
 pred SOP_pass[script:ScriptObject, ele:Element]{
-	script.element.host.effectiveScriptOrigin = ele.host.effectiveScriptOrigin
+	script.element.hostEffectiveOrigin = ele.hostEffectiveOrigin
 }
-
+/*
 // which browsing context is the script belong to?
 fact scriptObject_BrowsingContext_relationship{
 	all script:ScriptObject, ctx:BrowsingContext|{
 		ctx = script.browsingContext iff ctx = script.element.~elements.browsingContext
 	}
 }
-
-
+*/
+/*
 //script can manipulate a dom object if SOP allows it
 fact domManipulationEvent_definition{
 	all dme: DomManipulationEvent|{
@@ -365,7 +375,7 @@ fact domManipulationEvent_definition{
 			dme.oldElement != dme.newElement
 		}
 	}
-}
+}*/
 /*
 //Only the most recent element is connected with the DOM
 fact domManipulationEvent_MostRecentElementConnectedWithDom{
@@ -384,7 +394,7 @@ fact domManipulationEvent_DOMChangeOnlyOccurOnSameTag{
 	}
 }
 */
-
+/*
 //=================5.1.6 browsing context keywords
 //	func_form_target: BrowsingContext,
 fact scriptObject_form_target{
@@ -449,7 +459,7 @@ fact Location_navigation{
 			ne.script 
 			//TODO: add user interactive navigation here
 		) iff(
-			ne.script.element.host.effectiveScriptOrigin = ne.oldDoc.effectiveScriptOrigin or
+			ne.script.element.hostEffectiveOrigin = ne.oldDoc.effectiveScriptOrigin or
 			ne.oldDoc.~activeDocument in ne.script.browsingContext.canNavigate
 		)
 	}
@@ -458,105 +468,158 @@ fact Location_navigation{
 //11.4 Cross-domain messaging
 fact postMessage{
 	all pe: postMessageEvent|{
-		pe.script.element.host.effectiveScriptOrigin = pe.source.browsingContext.activeDocument.effectiveScriptOrigin
+		pe.script.element.hostEffectiveOrigin = pe.source.browsingContext.activeDocument.effectiveScriptOrigin
 	}
 }
-
+*/
 //====================== Unorganized stuff =======================/
 //TODO: organize
 
+fact dmeMustBeCalledFromValidScript{
+	all dme:DomManipulationEvent|{
+		some doc:Document|{
+			dme.script.element in doc.elements
+		}
+	}
+}
+
+//all Document must have an associate state
+fact all_doc_must_be_in_state{
+	all doc:Document|{
+		some s:ParserState|{
+			s.document = doc
+		}
+	}
+}
+
+fact InnerHTMLCantInjectScriptTag{
+	all dme:DomManipulationEvent, script:ScriptObject|{
+		dme.method = innerhtml =>
+		script.element not in dme.newElement.*children
+	}
+}
 
 fact MetaRefreshMustHaveAnOrigin{
-	all meta:METAElement|{
+	all meta:MetaElement|{
 		REFRESH = meta.http_equiv implies some meta.origin
 	}
 }
 
 //navigation using meta refresh
 fact Metarefresh_navigation{
-		//given any doc and meta
-         all doc:Document, meta:METAElement|{
-			{
-				//if the meta element is in the doc
-				meta in doc.elements
-				//and it has refresh http_equiv attribute
-				REFRESH = meta.http_equiv
-			}implies{
-				//then there must exist a corresponding navigation event
-				some navEvent:NavigationEvent|{
-					navEvent.origin = meta.origin
-					navEvent.oldDoc = doc
-				}
+	//given any doc and meta
+     all doc:Document, meta:MetaElement|{
+		{
+			//if the meta element is in the doc
+			meta in doc.elements
+			//and it has refresh http_equiv attribute
+			REFRESH = meta.http_equiv
+		}implies{
+			//then there must exist a corresponding navigation event
+			some navEvent:NavigationEvent|{
+				navEvent.origin = meta.origin
+				navEvent.oldDoc = doc
 			}
-         }   
+		}
+    }   
 }
 
-/*
-fact NoScriptExecutionForInnerhtml{
-      all el: Element|{
-      	el.cause.method = innerhtml implies{
-               all cl: el.*child | cl != ScriptElement
-         }
-      }
-}
-*/
+
 
 //6.1 eventloop
 
 //initial state
 fact ParserStarts{
-	no first.document
-	some first.tokenQueue.eleSeq
+	no first.document.elements
+	!first.tokenQueue.eleSeq.isEmpty
 }
 
 fact document_write_only_adds_new_node{
 	all dme: DomManipulationEvent|{
-		dme.method = document.write => 
+		dme.method = document_write => 
 		no dme.oldElement
 	}
 }
 
+fact innerHTML_are_sane{
+	all dme:DomManipulationEvent|{
+		dme.method = innerhtml implies{
+			one dme.oldElement 
+			one dme.newElement 
+			dme.oldElement != dme.newElement
+		}
+	}
+}
+
 pred ParserStep[doc, doc': Document, q, q': TokenQueue]{
-	q' = q.delete[0]
-	doc'.elements = doc.elements+q.first.*child
+	q'.eleSeq = q.eleSeq.rest
+	doc'.elements = doc.elements+q.eleSeq.first
 	//TODO: we also need to say doc' = doc is the same for everything else
 }
 
 pred InnerHTML[doc, doc':Document, ele, ele':Element, q, q':TokenQueue]{
-	ele.host.elements - ele.^child + ele'.*child = ele'.host.elements
-	ele in doc.elements
+
+	// the parent node for old element must be in the new document
+	ele.~children in doc'.elements
+	// old element is not in the new document
+	// this implicitly implies its children are not in the new doc
+	ele not in doc'.elements
+
+	//the new element's parent is the same as the old element's parent
+	ele'.~children = ele.~children
+
+	//the new element is in the new document
 	ele' in doc'.elements
-	q = q'
+
+	// queue does not change
+	q.eleSeq = q'.eleSeq
+	
+
 	//TODO: we also need to say doc' = doc is the same for everything else
 }
 
 pred Document_write[doc,doc':Document, ele':Element, q,q':TokenQueue]{
 	doc = doc'
-	q = q'
-	q' = q.insert[0,ele']
+	q'.eleSeq = q.eleSeq.insert[0,ele']
 }
 
 pred NavigationToJsUrl[doc,doc':Document, script:ScriptObject, q,q':TokenQueue]{
 	doc=doc'
-	q'.eleSeq = q.eleSqe + script.element
+	q'.eleSeq = q.eleSeq.insert[0,script.element]
 }
 
 //parser core
 fact parser_core{
 	all s: ParserState, s': s.next|{
-	
+
 		//you can only transfer from 1 state to the next by using the following means
-		ParserStep[s.document,s'document, s.tokenQueue, s'.tokenQueue] or
-		some ele,ele':Element|{
-			InnerHTML[s.document, s'.document, ele, ele', s.tokenQueue, s'.tokenQueue]
+
+		ParserStep[s.document,s'.document, s.tokenQueue, s'.tokenQueue] or
+		some dme:DomManipulationEvent|{
+			dme.method = innerhtml
+			dme.script = s.tokenQueue.eleSeq.first.script
+			dme.oldElement in s.document.elements
+			InnerHTML[s.document, s'.document, dme.oldElement, dme.newElement, s.tokenQueue, s'.tokenQueue]
 		} or 
-		some ele:Element|{
-			Document_write[s.document, s'.document, ele, s.tokenQueue, s'.tokenQueue]
+		some dme:DomManipulationEvent|{
+			dme.method = document_write
+			dme.script = s.tokenQueue.eleSeq.first.script
+			Document_write[s.document, s'.document, dme.newElement, s.tokenQueue, s'.tokenQueue]
 		} or 
-		some script:ScriptObject|{
+		some script:ScriptObject, nav:NavigationEvent|{
+			JAVASCRIPT = nav.origin.schema
+			nav.oldDoc = s.document
 			NavigationToJsUrl[s.document, s'.document, script, s.tokenQueue, s'.tokenQueue]
 		}
 
+	}
+}
+/*
+// dom manipulation events
+fact parser_events{
+	all s:ParserState, s':s.next|{
+
+		
 		all nav:NavigationEvent|{
 			// if a navigation event happens with a JavaScript URL
 			JAVASCRIPT = nav.origin.schema implies {
@@ -564,9 +627,8 @@ fact parser_core{
 				some script:ScriptObject|{
 					nav.oldDoc = s.document
 					NavigationToJsUrl[s.document, s'.document, script, s.tokenQueue, s'.tokenQueue]
-					
 					//TODO: we must say something about the content of the script, which is not currently modeled
-
+					
 				}
 			}
 		}
@@ -580,7 +642,7 @@ fact parser_core{
 				//and if he element it's trying to modify is in our document
 				domManip.oldElement in s.document.elements
 			}implies{
-				InnerHTML[s.document, s'.document, domManip.oldElement, domManip,newElement, s.tokenQueue, s'.tokenQueue]
+				InnerHTML[s.document, s'.document, domManip.oldElement, domManip.newElement, s.tokenQueue, s'.tokenQueue]
 			}
 			
 			//if the next script in queue uses document.write
@@ -588,90 +650,111 @@ fact parser_core{
 				domManip.method = document_write
 				domManip.script = s.tokenQueue.eleSeq.first.script
 			}implies{
-				Document_write[s.document, s'.document, domManip,newElement, s.tokenQueue, s'.tokenQueue]
-			}else{
-				ParserStep[s.document, s'.document, domManip, s.tokenQueue, s'.tokenQueue]
+				Document_write[s.document, s'.document, domManip.newElement, s.tokenQueue, s'.tokenQueue]
 			}
 		}
 	}
-}
+}*/
 
-/*
-
-//doc.write has to be called before the domcontentloaded event
-
-fact domcontentstatus {
-     all st: eventloop| st.Element.cause.method = document_write  =>
-     some st/nexts.domcontentloaded = 1
-}
-
-pred eventloopinit{
-    EventState/first.domcontentloaded = 0
-}
-
-
-//If an†event loop's†browsing contexts†all go away, then the†event loop†goes away as well. A†browsing context†always has an†event loop†coordinating its activities
-fact eventloopstatus {
-     all st:eventloop| no st.setbrowsingcontext |
-     no st/next
-
-}
-
-pred eventstatetransfer {
-      all s: eventloop, s': s.next {
-      	!(s.first!=null&&s.first.readyparserexecute = 1) =>   RunEvent [s.eventloop, s'.eventloop]
-      	s.isEmpty ! = 1 =>RunEvent [s.eventloop, s'.eventloop]å
- 	  }
-}
-
-//fire domcontentloaed event
-
-fact domcontentloaded {
-     all s: eventloop {
-         eventstatetransfer
-         s.domcontentloaded = 1
-   }
-     
-}
-
-// Running the eventloop till meet the condition 
-pred RunEvent [s.eventloop, s'.eventloop: set EventLoop] {
-        
-          s'.eventloop.taskqueue = s.eventloop.taskqueue.delete[0] //delete the executed event from the taskqueue
-  
-}
-
-
-//4.3 scripting
-//If the element has a src attribute, and the element has a defer //attribute, and the element has been flagged as "parser-  //inserted", and the element does not have an async attribute, //add it to listscriptexecutefinishparse
-
-fact scriptattribute {
-
-   selement : ScriptElement,s1: one listscriptexecutefinishparse,s2:one listscriptpendingparseblock, s3:listscriptinorder, 
-								s4:listscriptsoon{
-
-              selement.src != null && selement.defer = 1 && selement.parserinserted = 1 && selement.async != 1  => 
-              s1.add[selement]
-
-//If the element has a src attribute, and the element has been //flagged as "parser-inserted", and the element does not have an //async attributeThe element is the pending parsing-blocking //script of the Document of the parser that created the element. //(There can only be one such script per Document at a time.)
-
-              else selement.src != null && selement.parserinserted = 1 && selement.async != 1  => 
-              s2.add[selement]
-
-//Yuan: not sure if we need this? If the element does not have a //src attribute, and the element has been flagged as //"parser-/inserted", and either the parser that created the //script is an XML parser or it's an HTML parser whose script //nesting level is not greater than one, and the Document of the //HTML parser or XML parser that created the scriptelement has a //style sheet that is blocking scriptsThe element is the pending //parsing-blocking script of the Document of the parser that //created the element. (There can only be one such script per //Document at a time.)
-
-
-//If the element has a src attribute, does not have an async //attribute, and does not have the "force-async" flag setThe //element must be added to the end of the list of scripts that //will execute in order as soon as possible associated with the //Document of the script element at the time the prepare a script //algorithm started.
-              else selement.src != null && element.async = 0 && element.forceasync = 0 =>
-              s3.add[selement]
-
-//If the element has a src attributeThe element must be added to //the set of scripts that will execute as soon as possible of the //Document of the script element at the time the prepare a //scriptalgorithm started.
-              else selement.src != null =>
-              s4.add[selement]
-
-
-
+fact element_on_queue_are_unique{
+	all s:ParserState|{
+		!s.tokenQueue.eleSeq.hasDups
 	}
 }
 
-*/
+//======== innerHTML Can't inject script test=======/
+
+fact all_dme_are_innerHTML{
+	all dme:DomManipulationEvent|{
+		dme.method = innerhtml
+	}
+}
+
+
+
+//navigation using meta refresh
+fact Metarefresh_navigation{
+	//given any doc and meta
+     all doc:Document, meta:MetaElement|{
+		{
+			//if the meta element is in the doc
+			meta in doc.elements
+			//and it has refresh http_equiv attribute
+			REFRESH = meta.http_equiv
+		}implies{
+			//then there must exist a corresponding navigation event
+			some navEvent:NavigationEvent|{
+				navEvent.origin = meta.origin
+				navEvent.oldDoc = doc
+			}
+		}
+    }   
+}
+
+//user cannot navigate?
+
+fact Navigation{
+	all ne:NavigationEvent|{
+		some s:ParserState, meta: MetaElement|{
+			ne.oldDoc = s.document
+			meta in s.document.elements 
+			meta.origin = ne.origin
+		} /*or 
+		some s:ParserState, scriptObj:ScriptObject|{
+			scriptObj = ne.script
+			scriptObj.element in s.document.elements 
+		}*/
+	}
+}
+
+run RunToEmpty{
+	//last.tokenQueue.eleSeq.isEmpty
+	some DomManipulationEvent
+}for 5
+
+run sanityCheck{
+	some s:ParserState, s':s.next, ele:Element|{
+		s'.next = last
+		ele in s'.document.elements
+		ele not in last.document.elements
+		s.tokenQueue.eleSeq.first != s'.tokenQueue.eleSeq.first
+	}
+}for 5
+
+fact no_meta_in_first{
+	all meta:MetaElement|{
+		meta not in univ.(first.tokenQueue.eleSeq)
+	}
+}
+
+run injectMeta{
+	// a meta element 
+	some meta:MetaElement|{
+		meta in last.document.elements
+		meta not in first.document.elements
+		meta not in univ.(first.tokenQueue.eleSeq)
+	}
+}for 10
+
+run nav_works{/*
+	some nav:NavigationEvent|{
+		nav.origin.schema = JAVASCRIPT
+	}*/
+
+	some nav:NavigationEvent,doc:Document,script:ScriptObject, meta:MetaElement, s:ParserState|{
+		meta in doc.elements
+		meta.origin = nav.origin
+		s.next = last
+		script.element not in s.document.elements
+		meta in s.document.elements
+		script.element in last.document.elements
+	}
+}for 5
+
+run innerHTMLCantInjectScripts{
+	some scriptObj:ScriptObject |{
+		last.tokenQueue.eleSeq[0].script = scriptObj and
+		scriptObj.element not in univ.(first.tokenQueue.eleSeq)
+	}
+}for 5
+
