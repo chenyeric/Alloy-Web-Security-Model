@@ -243,7 +243,7 @@ fact no_cycle_element_chain{
 
 fact elements_in_document_are_reachable{
 	all element: Element, doc: Document|{
-		element in doc.elements => element in doc.html.*children
+		element in doc.elements => element in doc.root.*children
 	}
 }
 
@@ -554,7 +554,7 @@ fact innerHTML_are_sane{
 pred ParserStep[doc, doc': Document, q, q': TokenQueue]{
 	q'.eleSeq = q.eleSeq.rest
 	doc'.elements = doc.elements+q.eleSeq.first
-	//TODO: we also need to say doc' = doc is the same for everything else
+	//TODO: we also need to say doc' = doc for everything else
 }
 
 pred InnerHTML[doc, doc':Document, ele, ele':Element, q, q':TokenQueue]{
@@ -592,7 +592,7 @@ pred NavigationToJsUrl[doc,doc':Document, script:ScriptObject, q,q':TokenQueue]{
 fact parser_core{
 	all s: ParserState, s': s.next|{
 
-		//you can only transfer from 1 state to the next by using the following means
+		//you can only transfer from 1 state to the next by using the following methods
 
 		ParserStep[s.document,s'.document, s.tokenQueue, s'.tokenQueue] or
 		some dme:DomManipulationEvent|{
@@ -616,6 +616,7 @@ fact parser_core{
 }
 /*
 // dom manipulation events
+// ============= OBSOLETE =================
 fact parser_events{
 	all s:ParserState, s':s.next|{
 
@@ -757,4 +758,9 @@ run innerHTMLCantInjectScripts{
 		scriptObj.element not in univ.(first.tokenQueue.eleSeq)
 	}
 }for 5
+
+run DominatrixssIsSecure{
+
+
+}
 

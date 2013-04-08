@@ -9,7 +9,7 @@ enum Bool { TRUE, FALSE} //hack to get boolean
 enum HTMLtag {html,body, head, iframe, script, meta} 
 //sig string{} //used in things like browsing context name
 
-/*
+
 //================================Page Loader==============================/
 sig WindowProxy extends Window{} //the window object
 sig History{
@@ -70,7 +70,7 @@ sig UnitOfRelatedSimilarOriginBrowsingContext{
 sig Location {
 	href: Origin,
 }
-*/
+
 sig Document {
 
 //	browsingContext: one BrowsingContext, // which BC this document belongs to
@@ -81,7 +81,7 @@ sig Document {
 	origin: one Origin,
 	effectiveScriptOrigin: one Origin,	
 
-	html: HTMLElement,
+	root: HTMLElement,
 	elements: set Element,
     
 }
@@ -104,10 +104,7 @@ sig Element{
 	host: set Document, // the set is used to represent "time"
 	hostEffectiveOrigin: Origin, //TODO: I need this to represent the "origin" of our host document
 	tag: HTMLtag ,  //this element MUST exist for every element
-//yuan:add flag for executed or not?
- //    executed: Bool,
-//Yuan add elemen child
-     children: set Element
+    children: set Element
 
 } 
 
@@ -117,7 +114,7 @@ sig HTMLElement extends Element{
 }{
 	tag = html
 }
-//Yuan add meta element
+
 enum HTTPEquivTypes{REFRESH}
 sig MetaElement extends Element{
      origin : lone Origin,
@@ -130,7 +127,7 @@ sig HEADElement extends Element{}{
 	tag = head
 }
 
-/*
+
 
 sig BODYElement extends Element{}{
 	tag = body
@@ -151,7 +148,7 @@ enum iframe_sandbox_policy {
 	NOT_ALLOW_FORMS, 
 	NOT_ALLOW_SCRIPTS
 }
-*/
+
 //================================Dom Events==========================/
 sig DomEvent{}
 
@@ -188,14 +185,7 @@ sig ScriptObject{
   */
 } 
 
-// 6.1.4 Event loops - http://www.w3.org/html/wg/drafts/html/master/webappapis.html#event-loop
-//sig EventLoop{
-//	unitOfRelatedSimilarOriginBrowsingContext: lone //UnitOfRelatedSimilarOriginBrowsingContext,
 
-//}{
-	//An event loop always has at least one browsing context.
-//	some //unitOfRelatedSimilarOriginBrowsingContext.browsingContexts
-//}
 
 
 
